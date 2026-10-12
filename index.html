@@ -1,0 +1,2340 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>中了7000万 · 人生模拟器</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=Noto+Serif+SC:wght@700;900&display=swap');
+
+:root{
+  --bg:#0d0d18; --bg2:#13131f;
+  --card:rgba(30,30,46,.72); --card-solid:#1e1e2e; --card2:rgba(38,38,58,.72); --card2-solid:#26263a;
+  --border:rgba(212,175,55,.18); --border2:rgba(255,255,255,.06);
+  --text:#ece9e4; --text2:#9b97a8; --text3:#6b6258;
+  --gold:#d4af37; --gold2:#f5d78a; --gold3:#b8941f;
+  --red:#e05c5c; --green:#5cb87a; --blue:#5c9de0; --purple:#8a5ce0;
+  --shadow:0 4px 24px rgba(0,0,0,.4);
+  --shadow-gold:0 0 30px rgba(212,175,55,.12);
+  --r:14px; --r2:10px; --r3:20px;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  font-family:"Noto Sans SC",-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;
+  background:var(--bg);
+  background-image:
+    radial-gradient(ellipse at 20% 0%,rgba(212,175,55,.06) 0%,transparent 50%),
+    radial-gradient(ellipse at 80% 100%,rgba(92,157,224,.04) 0%,transparent 50%),
+    linear-gradient(180deg,var(--bg) 0%,var(--bg2) 100%);
+  background-attachment:fixed;
+  color:var(--text); line-height:1.75; min-height:100vh;
+  -webkit-font-smoothing:antialiased;
+  overflow-x:hidden;
+}
+.wrap{
+  max-width:780px;margin:0 auto;padding:20px 16px 80px;
+  position:relative;
+}
+.wrap::before{
+  content:'';position:fixed;top:0;left:0;right:0;height:2px;
+  background:linear-gradient(90deg,transparent,var(--gold),transparent);
+  z-index:200;opacity:.5;
+}
+
+/* ============ 进度时间轴 ============ */
+.timeline{
+  position:fixed;top:0;left:0;right:0;height:3px;
+  background:rgba(255,255,255,.04);z-index:300;
+}
+.timeline i{
+  display:block;height:100%;
+  background:linear-gradient(90deg,var(--gold3),var(--gold),var(--gold2));
+  transition:width .6s cubic-bezier(.4,0,.2,1);
+  box-shadow:0 0 8px rgba(212,175,55,.4);
+}
+
+/* ============ 顶部数值栏 ============ */
+.hud{
+  display:grid;grid-template-columns:repeat(4,1fr);gap:8px;
+  margin-bottom:10px;
+  position:sticky;top:3px;z-index:50;
+  padding:10px 0 8px;
+  background:linear-gradient(180deg,var(--bg) 60%,transparent);
+  backdrop-filter:blur(8px);
+}
+.hud .cell{
+  background:var(--card);
+  border:1px solid var(--border2);
+  border-radius:var(--r2);padding:8px 6px;text-align:center;
+  backdrop-filter:blur(10px);
+  transition:border-color .2s,transform .15s;
+}
+.hud .cell:hover{border-color:var(--border);transform:translateY(-1px)}
+.hud .k{font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;font-weight:500}
+.hud .v{
+  font-size:18px;font-weight:700;color:var(--gold2);
+  font-variant-numeric:tabular-nums;
+  text-shadow:0 0 12px rgba(212,175,55,.25);
+  margin-top:2px;
+  transition:color .3s;
+}
+.hud .v.flash-up{color:var(--green)!important;text-shadow:0 0 16px rgba(92,184,122,.5)!important}
+.hud .v.flash-down{color:var(--red)!important;text-shadow:0 0 16px rgba(224,92,92,.5)!important}
+.hud .v.small{font-size:14px}
+.bars{
+  display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;
+}
+.bar-box{
+  background:var(--card);border:1px solid var(--border2);
+  border-radius:var(--r2);padding:10px 14px;
+  backdrop-filter:blur(10px);
+}
+.bar-box .k{font-size:11px;color:var(--text2);display:flex;justify-content:space-between;font-weight:500}
+.bar-box .k span:last-child{color:var(--text);font-weight:700;font-variant-numeric:tabular-nums}
+.bar{
+  height:6px;background:rgba(0,0,0,.35);border-radius:3px;
+  margin-top:7px;overflow:hidden;position:relative;
+}
+.bar::after{
+  content:'';position:absolute;inset:0;
+  background:linear-gradient(90deg,transparent 0%,rgba(255,255,255,.08) 50%,transparent 100%);
+}
+.bar i{display:block;height:100%;border-radius:3px;transition:width .5s cubic-bezier(.4,0,.2,1)}
+.bar.mood i{background:linear-gradient(90deg,#e05c5c 0%,#e8b84b 50%,#5cb87a 100%);box-shadow:0 0 8px rgba(232,184,75,.3)}
+.bar.rep i{background:linear-gradient(90deg,#8a5ce0 0%,#5c9de0 100%);box-shadow:0 0 8px rgba(92,157,224,.3)}
+
+/* ============ 资产分布 ============ */
+.assets{
+  display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px;
+  padding:10px 12px;
+  background:var(--card);border:1px solid var(--border2);
+  border-radius:var(--r2);
+  backdrop-filter:blur(10px);
+}
+.assets::before{
+  content:'持仓';font-size:10px;color:var(--text3);
+  text-transform:uppercase;letter-spacing:1px;
+  width:100%;display:block;margin-bottom:2px;
+}
+.asset-chip{
+  background:rgba(212,175,55,.06);border:1px solid var(--border2);
+  border-radius:16px;padding:4px 12px;font-size:12px;color:var(--text2);
+  transition:all .15s;
+  animation:chipIn .3s ease;
+}
+@keyframes chipIn{from{opacity:0;transform:scale(.8)}to{opacity:1;transform:none}}
+.asset-chip:hover{border-color:var(--border);background:rgba(212,175,55,.1)}
+.asset-chip b{color:var(--gold2);font-weight:700;font-variant-numeric:tabular-nums}
+
+/* ============ 卡片 ============ */
+.card{
+  background:var(--card);
+  border:1px solid var(--border2);
+  border-radius:var(--r);padding:24px 22px;margin-bottom:14px;
+  backdrop-filter:blur(14px);
+  box-shadow:var(--shadow);
+  position:relative;overflow:hidden;
+  animation:cardIn .4s cubic-bezier(.4,0,.2,1);
+}
+@keyframes cardIn{from{opacity:0;transform:translateY(16px) scale(.98)}to{opacity:1;transform:none}}
+.card.exit{animation:cardOut .3s ease forwards}
+@keyframes cardOut{to{opacity:0;transform:translateY(-12px) scale(.98)}}
+.card::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:1px;
+  background:linear-gradient(90deg,transparent,var(--border),transparent);
+}
+.card .tag{
+  display:inline-block;font-size:11px;color:#1a1a24;
+  background:linear-gradient(135deg,var(--gold2),var(--gold));
+  border-radius:4px;padding:2px 10px;margin-bottom:12px;
+  font-weight:700;letter-spacing:.5px;
+  box-shadow:0 2px 8px rgba(212,175,55,.2);
+}
+.card .tag.danger{background:linear-gradient(135deg,#ff6b6b,#e05c5c);color:#fff}
+.card .tag.dark{background:linear-gradient(135deg,#4a4a6a,#2a2a3a);color:var(--text2)}
+.card h2{
+  font-family:"Noto Serif SC",serif;
+  font-size:22px;margin-bottom:12px;color:#fff;
+  font-weight:900;line-height:1.3;
+}
+.card p{
+  font-size:15px;color:var(--text);white-space:pre-wrap;
+  line-height:1.8;
+}
+.card p em{color:var(--text2);font-style:normal;font-size:13px}
+
+/* ============ 选项按钮 ============ */
+.opts{display:flex;flex-direction:column;gap:10px}
+.opt{
+  background:var(--card2);border:1px solid var(--border2);
+  border-radius:var(--r2);
+  padding:16px 18px;font-size:15.5px;color:var(--text);
+  text-align:left;cursor:pointer;font-family:inherit;
+  transition:all .2s cubic-bezier(.4,0,.2,1);
+  position:relative;overflow:hidden;
+  backdrop-filter:blur(10px);
+  animation:optIn .3s ease backwards;
+}
+@keyframes optIn{from{opacity:0;transform:translateX(-12px)}to{opacity:1;transform:none}}
+.opt:nth-child(1){animation-delay:.05s}
+.opt:nth-child(2){animation-delay:.1s}
+.opt:nth-child(3){animation-delay:.15s}
+.opt:nth-child(4){animation-delay:.2s}
+.opt::before{
+  content:'';position:absolute;left:0;top:0;bottom:0;width:3px;
+  background:var(--gold);transform:scaleY(0);transform-origin:top;
+  transition:transform .25s;
+}
+.opt::after{
+  content:'';position:absolute;inset:0;
+  background:linear-gradient(90deg,transparent,rgba(212,175,55,.06),transparent);
+  transform:translateX(-100%);transition:transform .5s;
+}
+.opt:hover{
+  border-color:var(--border);background:rgba(212,175,55,.06);
+  transform:translateX(2px);
+  box-shadow:0 0 20px rgba(212,175,55,.08);
+}
+.opt:hover::before{transform:scaleY(1)}
+.opt:hover::after{transform:translateX(100%)}
+.opt:active{transform:translateX(2px) scale(.99)}
+.opt .sub{
+  display:block;font-size:12.5px;color:var(--text3);
+  margin-top:4px;line-height:1.5;
+}
+
+/* ============ 结果区 ============ */
+.result{
+  background:var(--card2);border-left:3px solid var(--gold);
+  border-radius:0 var(--r2) var(--r2) 0;
+  padding:16px 18px;margin-bottom:14px;
+  font-size:14.5px;white-space:pre-wrap;line-height:1.8;
+  backdrop-filter:blur(10px);
+  animation:fadeIn .4s ease;
+}
+.result.danger{border-left-color:var(--red);background:rgba(224,92,92,.06)}
+.result.good{border-left-color:var(--green);background:rgba(92,184,122,.06)}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.diff{
+  display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;
+  padding:2px 0;
+}
+.diff span{
+  font-size:12.5px;border-radius:6px;padding:3px 12px;
+  font-variant-numeric:tabular-nums;font-weight:600;
+  animation:pop .3s ease;
+}
+@keyframes pop{from{transform:scale(.8);opacity:0}to{transform:scale(1);opacity:1}}
+.diff .up{background:rgba(92,184,122,.12);color:var(--green);border:1px solid rgba(92,184,122,.35)}
+.diff .down{background:rgba(224,92,92,.1);color:var(--red);border:1px solid rgba(224,92,92,.35)}
+.diff .flat{background:rgba(155,151,168,.08);color:var(--text2);border:1px solid var(--border2)}
+
+.btn-main{
+  display:block;width:100%;
+  background:linear-gradient(135deg,var(--gold2) 0%,var(--gold) 50%,var(--gold3) 100%);
+  color:#1a1a24;border:none;border-radius:var(--r2);
+  padding:16px;font-size:17px;font-weight:700;cursor:pointer;
+  font-family:inherit;letter-spacing:1px;
+  transition:all .2s;
+  box-shadow:0 4px 16px rgba(212,175,55,.25),inset 0 1px 0 rgba(255,255,255,.2);
+  position:relative;overflow:hidden;
+  animation:btnIn .4s ease;
+}
+@keyframes btnIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.btn-main::before{
+  content:'';position:absolute;inset:0;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.2),transparent);
+  transform:translateX(-100%);transition:transform .6s;
+}
+.btn-main:hover{
+  filter:brightness(1.08);
+  box-shadow:0 6px 24px rgba(212,175,55,.35),inset 0 1px 0 rgba(255,255,255,.25);
+  transform:translateY(-1px);
+}
+.btn-main:hover::before{transform:translateX(100%)}
+.btn-main:active{transform:translateY(0)}
+
+/* ============ 震动效果 ============ */
+.shake{animation:shake .4s ease}
+@keyframes shake{
+  0%,100%{transform:translateX(0)}
+  20%{transform:translateX(-6px)}
+  40%{transform:translateX(6px)}
+  60%{transform:translateX(-4px)}
+  80%{transform:translateX(4px)}
+}
+
+/* ============ 开场 / 结局 ============ */
+.hero{
+  text-align:center;padding:80px 16px 40px;
+  animation:heroIn .6s ease;
+}
+@keyframes heroIn{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:none}}
+.hero .emoji{
+  font-size:72px;margin-bottom:20px;
+  display:inline-block;
+  animation:float 3s ease-in-out infinite;
+  filter:drop-shadow(0 4px 20px rgba(212,175,55,.3));
+}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+.hero h1{
+  font-family:"Noto Serif SC",serif;
+  font-size:36px;color:var(--gold2);
+  margin-bottom:10px;font-weight:900;
+  text-shadow:0 0 30px rgba(212,175,55,.3);
+  letter-spacing:2px;
+}
+.hero .sub{color:var(--text2);font-size:14px;margin-bottom:6px;letter-spacing:.5px}
+.hero .money{
+  font-size:52px;font-weight:900;color:#fff;
+  margin:24px 0 8px;font-variant-numeric:tabular-nums;
+  text-shadow:0 0 40px rgba(212,175,55,.4);
+  letter-spacing:1px;
+  background:linear-gradient(180deg,#fff 0%,var(--gold2) 100%);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+  animation:moneyGlow 3s ease-in-out infinite;
+}
+@keyframes moneyGlow{0%,100%{filter:drop-shadow(0 0 20px rgba(212,175,55,.3))}50%{filter:drop-shadow(0 0 40px rgba(212,175,55,.5))}}
+.hero .btn-main{max-width:340px;margin:30px auto 0}
+.hero .tips{
+  margin-top:30px;font-size:13px;color:var(--text2);
+  text-align:left;
+  background:var(--card);border:1px solid var(--border2);
+  border-radius:var(--r2);padding:16px 20px;
+  backdrop-filter:blur(10px);
+}
+.hero .tips::before{
+  content:'游戏说明';display:block;
+  font-size:11px;color:var(--gold);
+  text-transform:uppercase;letter-spacing:1px;
+  margin-bottom:8px;font-weight:700;
+}
+.hero .tips ul{list-style:none;padding:0;margin:0}
+.hero .tips li{
+  padding-left:20px;position:relative;margin-bottom:6px;list-style:none;
+}
+.hero .tips li::before{
+  content:'◆';position:absolute;left:0;color:var(--gold);
+  font-size:8px;top:7px;
+}
+
+.ending{padding:60px 16px 40px;text-align:center;animation:endingIn .8s ease}
+@keyframes endingIn{from{opacity:0;transform:scale(1.05)}to{opacity:1;transform:none}}
+.ending .emoji{font-size:80px;animation:none;display:block;margin-bottom:16px}
+.ending .emoji.shake-end{animation:shakeEnd .5s ease 3}
+@keyframes shakeEnd{0%,100%{transform:translateX(0)}25%{transform:translateX(-8px) rotate(-3deg)}75%{transform:translateX(8px) rotate(3deg)}}
+.ending h1{
+  font-size:30px;margin-bottom:16px;
+  background:linear-gradient(180deg,#fff,var(--gold2));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+  text-shadow:0 0 40px rgba(212,175,55,.2);
+}
+.ending h1.dark{background:linear-gradient(180deg,#fff,var(--red));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.ending .rank{
+  font-size:15px;color:var(--text);
+  background:var(--card);border:1px solid var(--border2);
+  border-radius:var(--r2);padding:18px 22px;
+  margin:16px 0;text-align:left;line-height:2.2;
+  backdrop-filter:blur(10px);
+}
+.ending .rank b{color:var(--gold2);font-weight:700}
+.ending .rank b.red{color:var(--red)}
+
+/* ============ 日志 ============ */
+.log-toggle{
+  font-size:12px;color:var(--text3);text-align:center;
+  cursor:pointer;padding:8px;user-select:none;
+  border-radius:var(--r2);transition:all .15s;
+  letter-spacing:.5px;
+}
+.log-toggle:hover{color:var(--gold);background:var(--card)}
+.log{
+  max-height:240px;overflow-y:auto;
+  font-size:12px;color:var(--text2);
+  background:var(--card);border:1px solid var(--border2);
+  border-radius:var(--r2);padding:12px 16px;display:none;
+  backdrop-filter:blur(10px);
+}
+.log::-webkit-scrollbar{width:4px}
+.log::-webkit-scrollbar-track{background:transparent}
+.log::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+.log.show{display:block;animation:fadeIn .3s}
+.log div{
+  padding:3px 0;border-bottom:1px solid rgba(255,255,255,.04);
+}
+.log div:last-child{border-bottom:none}
+.log b{color:var(--gold2)}
+
+/* ============ 响应式 ============ */
+@media(max-width:560px){
+  .wrap{padding:14px 12px 60px}
+  .hud{grid-template-columns:repeat(2,1fr);gap:6px}
+  .hud .v{font-size:16px}
+  .hero{padding:50px 12px 30px}
+  .hero h1{font-size:28px}
+  .hero .money{font-size:38px}
+  .hero .emoji{font-size:56px}
+  .card{padding:18px 16px}
+  .card h2{font-size:19px}
+  .opt{padding:14px 14px;font-size:14.5px}
+  .btn-main{padding:14px;font-size:16px}
+  .ending .emoji{font-size:60px}
+  .ending h1{font-size:24px}
+  .bars{grid-template-columns:1fr 1fr;gap:6px}
+}
+</style>
+</head>
+<body>
+<div class="timeline"><i id="tl-bar" style="width:0%"></i></div>
+<div class="wrap" id="app"></div>
+
+<script>
+/* ============================================================
+ * 中了7000万 · 人生模拟器
+ * 规则：中奖 7000 万，偶然所得税 20%，到手 5600 万。
+ * 按月推进 10 年（120 个月），每月 1 个事件。
+ * 四维度：总资产 / 每月被动收入 / 心情 / 口碑。
+ * 87 个事件 · 12 种结局 · 含黑暗结局
+ * ============================================================ */
+
+// ---------- 工具 ----------
+const W = 10000;
+function fmt(n){
+  const neg = n < 0; n = Math.abs(n);
+  let s;
+  if (n >= 100000000) s = (n/100000000).toFixed(2) + '亿';
+  else if (n >= W) s = Math.round(n/W) + '万';
+  else s = Math.round(n) + '元';
+  return (neg?'-':'') + s;
+}
+function fmtd(n){ return (n>=0?'+':'') + fmt(n); }
+function rnd(a,b){ return a + Math.random()*(b-a); }
+function chance(p){ return Math.random() < p; }
+
+// ---------- 数字滚动动画 ----------
+function animNum(el, from, to, dur=600){
+  const start = performance.now();
+  function tick(now){
+    const t = Math.min(1,(now-start)/dur);
+    const ease = 1-Math.pow(1-t,3);
+    const val = from + (to-from)*ease;
+    el.textContent = fmt(val);
+    if(t<1) requestAnimationFrame(tick);
+    else el.textContent = fmt(to);
+  }
+  requestAnimationFrame(tick);
+}
+
+// ---------- 震动反馈 ----------
+function shakeScreen(){
+  const c = document.querySelector('.card');
+  if(c){ c.classList.add('shake'); setTimeout(()=>c.classList.remove('shake'),400); }
+  if(navigator.vibrate) navigator.vibrate(80);
+}
+function flashHUD(field, up){
+  const el = document.querySelector('.hud .v.'+field);
+  if(!el) return;
+  el.classList.add(up?'flash-up':'flash-down');
+  setTimeout(()=>{el.classList.remove('flash-up');el.classList.remove('flash-down')},800);
+}
+
+// ---------- 游戏状态 ----------
+let S, prevSnap;
+function newGame(){
+  S = {
+    month: 0, cash: 5600*W, deposit: 0, fund: 0, gold: 0,
+    house: 0, biz: 0, bizIncome: 0,
+    carCost: 0, houseCost: 0, staffCost: 0,
+    lifestyle: 1, mood: 72, rep: 70,
+    macau: 0, scams: 0, scamLoss: 0,
+    face: false, public: false,
+    married: false, divorced: false, kids: false,
+    quit: false, mba: false, gym: false,
+    drinking: 0, mistress: false, gambling: 0,
+    prenup: false, trust: false,
+    blackmail: 0, sued: false, illness: 0,
+    friendsLost: 0, police: 0,
+    log: [], used: {}, lastEvent: null, over: false,
+  };
+}
+function totalAssets(){ return S.cash + S.deposit + S.fund + S.gold + S.house + S.biz; }
+function totalAssetsCond(s){ return (s.cash+s.deposit+s.fund+s.gold) > 1000*W; }
+function monthlyPassive(){ return S.deposit*0.022/12 + S.bizIncome; }
+function monthlyCost(){
+  const base = [0, 1.2*W, 3*W, 8*W][S.lifestyle];
+  return base + S.carCost + S.houseCost + S.staffCost;
+}
+function addMood(d){ S.mood = Math.max(0, Math.min(100, S.mood + d)); }
+function addRep(d){ S.rep = Math.max(0, Math.min(100, S.rep + d)); }
+function say(t){ S.log.unshift(`第${S.month}月 · ${t}`); if(S.log.length>100) S.log.pop(); }
+
+// ---------- 事件库 (87 个) ----------
+const EVENTS = [
+
+/* ======== 序章（固定顺序） ======== */
+{id:'mask', fixed:0, title:'领奖现场', tag:'序章',
+ desc:'彩票中心的灯亮得晃眼。7000 万奖金，扣掉 20% 偶然所得税，5600 万打进你的卡里。\n\n工作人员递来两样东西：一张银行卡，和一个卡通头套。\n\n「要不要接受采访？可以戴头套。」旁边已经有记者在等了。',
+ options:[
+  {t:'戴头套领奖，谢绝采访', sub:'低调是中奖者的第一条保命法则', fx(s){
+    s.face=false; addMood(2);
+    return '你套上头套，照片里的你像个吉祥物。没人知道你是谁。\n\n这世上针对中奖者的骗局，比你想象的多得多——不露脸，就断了他们找到你的路。';
+  }},
+  {t:'露脸接受采访，分享喜悦', sub:'出名要趁早？', fx(s){
+    s.face=true; addRep(8); addMood(6);
+    return '你对着镜头笑得很灿烂。当晚，你的脸出现在本地新闻和好几个短视频里。\n\n手机从此没安静过：十年没联系的同学、八竿子打不着的亲戚、还有各种「理财顾问」……都记住了你的脸。';
+  }},
+ ]},
+{id:'secret', fixed:1, title:'这笔钱，告诉谁？', tag:'序章',
+ desc:'回到家，银行卡揣在兜里，像揣着一块烧红的炭。\n\n枕边人问你怎么今天心不在焉。家族群里正为二舅家孩子满月随多少份子钱吵得热闹。',
+ options:[
+  {t:'谁也不说，照常上班', sub:'巨款隐身术', fx(s){
+    addMood(-4); addRep(2);
+    return '你第二天照常挤地铁。同事抱怨老板时你在心里算了笔账：5600 万存大额存单，一年利息 120 多万，等于每月白捡 10 万。\n\n秘密保守得很好，但你变得有点心不在焉。';
+  }},
+  {t:'只告诉配偶', sub:'最稳妥的常见选择', fx(s){
+    addMood(3);
+    return '当晚你们聊到凌晨三点。激动、害怕、兴奋，最后达成一致：财不外露，先想好怎么放，再慢慢改善生活。\n\n两个人一起保守秘密，压力小了一半。';
+  }},
+  {t:'告诉父母和最亲的几个人', sub:'亲情需要分享，但秘密会扩散', fx(s){
+    addRep(4); addMood(4); s.public=true;
+    return '你妈在电话里哭了，你爸沉默了半天说了句「别乱花」。\n\n一周后你发现，三姑六婆看你的眼神都不一样了——秘密这个东西，告诉一个人就等于告诉全世界。';
+  }},
+  {t:'发朋友圈官宣：我中奖了！', sub:'流量至上', fx(s){
+    s.public=true; s.face=true; addRep(-6); addMood(8);
+    return '点赞 999+，私信炸了。有人恭喜，有人借钱，有人拉你「内部项目」，还有三个自称初恋的。\n\n你火了，也彻底暴露了。';
+  }},
+ ]},
+
+/* ======== 亲友借钱 (10) ======== */
+{id:'cousin', title:'表哥要借 200 万开火锅店', tag:'亲友',
+ w:10, once:true, cond:s=>s.month>=1,
+ desc:'表哥提着两瓶酒上门，说看中了一个铺面，开火锅店，「一年回本，两年翻番」，就差 200 万。\n\n「弟，咱从小一起长大，哥还能坑你？」',
+ options:[
+  {t:'借 200 万，打借条', sub:'餐饮业两年倒闭率超过七成', fx(s){
+    if(s.cash<200*W) return '你账上现金不够了，表哥悻悻而归。';
+    s.cash-=200*W;
+    if(chance(0.25)){ s.cash+=240*W; addRep(5); addMood(5);
+      return '奇迹发生了：火锅店真火了，两年后表哥连本带利还了你 240 万，全家都说你有眼光。\n\n但你知道，这种故事是少数。';
+    }
+    addRep(-3); addMood(-6);
+    return '一年半后，火锅店关门。200 万变成了一堆二手桌椅。\n\n表哥躲着你，借条成了一张纸。家族聚会上，舅妈阴阳怪气：「那么有钱还逼债」。钱没了，亲戚也淡了。';
+  }},
+  {t:'给 5 万：「不用还了」', sub:'把借钱变成小额赠予', fx(s){
+    if(s.cash<5*W) return '现金不够。';
+    s.cash-=5*W; addRep(4); addMood(2);
+    return '表哥脸色变了几变，还是收下了。\n\n后来他没开成火锅店，但逢年过节对你格外热情。你用 5 万买断了一笔 200 万的坏账风险。';
+  }},
+  {t:'直接拒绝', sub:'不借是本分，但要承担关系代价', fx(s){
+    addRep(-6); addMood(-2); s.friendsLost++;
+    return '表哥摔门而去。家族群里很快有了风言风语：「中了奖就翻脸不认人」。\n\n你守住了钱，失了口碑。这种事，以后还会有很多次。';
+  }},
+ ]},
+{id:'friend-sick', title:'大学室友重病，差 20 万手术费', tag:'亲友',
+ w:6, cond:s=>s.month>=6,
+ desc:'深夜，大学睡你上铺的兄弟打来电话，声音沙哑：确诊了，手术费还差 20 万，能借的都借了。\n\n「实在没办法才找你……」',
+ options:[
+  {t:'转 20 万：「先治病，钱以后再说」', sub:'救命钱和借钱是两回事', fx(s){
+    if(s.cash<20*W) return '现金不足，你心有余而力不足。';
+    s.cash-=20*W; addRep(8); addMood(6);
+    return '手术很成功。半年后他发来复查报告和一句「命是你给的」。\n\n他没提还钱，你也没提。有些钱花出去，买的是一辈子的安心。';
+  }},
+  {t:'给 5 万表心意', sub:'量力而行', fx(s){
+    if(s.cash<5*W) return '现金不足。';
+    s.cash-=5*W; addRep(2);
+    return '他收了钱，说了谢谢。后来听说水滴筹凑够了剩下的部分。\n\n你心里有一点说不上来的滋味。';
+  }},
+  {t:'帮忙转发筹款链接', sub:'不出钱，出力', fx(s){
+    addRep(-2); addMood(-3);
+    return '你转发了链接，配文「帮帮我兄弟」。后来你总想起他在电话里的声音。\n\n你帮了，但好像又没帮。';
+  }},
+ ]},
+{id:'relatives-line', title:'老家亲戚排队借钱', tag:'亲友',
+ w:8, once:true, cond:s=>s.public,
+ desc:'你中奖的消息在老家传开后，门槛快被踏破了：\n三姑要翻新房、表叔儿子彩礼差 18 万、远房侄子上大学要赞助、还有个论不出辈分的要做生意……\n\n每个人都说：「对你来说就是九牛一毛。」',
+ options:[
+  {t:'立下规矩：一概不借，重大病灾除外', sub:'制度化拒绝，长痛不如短痛', fx(s){
+    addRep(-5); addMood(4);
+    return '你请了顿家族饭，当众把话说明白。饭桌上冷了场，之后找你借钱的人断崖式减少。\n\n老家说你「抠」的声音传了半年，然后也就淡了。规则一旦立住，就没人再试。';
+  }},
+  {t:'能帮就帮，来者不拒', sub:'每笔几万到几十万', fx(s){
+    const cost=80*W; if(s.cash<cost) return '现金快不够了，你被迫停止撒钱。';
+    s.cash-=cost; addRep(6); addMood(-4);
+    return '一年下来借出去 80 多万，借条一小沓，还钱的没有一个。\n\n你的口碑在老家封神：「活菩萨」。但从第二年起，借钱的变成了理直气壮的：「去年都借了，今年为啥不借？」';
+  }},
+  {t:'全都拉黑，断绝来往', sub:'物理隔绝', fx(s){
+    addRep(-15); addMood(-6); s.friendsLost+=3;
+    return '你退了所有家族群。世界清静了，但过年时父母欲言又止：「都是亲戚……」\n\n钱守住了，根断了。';
+  }},
+ ]},
+{id:'uncle-venture', title:'舅舅要开石材厂', tag:'亲友',
+ w:7, once:true, cond:s=>s.month>=4 && s.public,
+ desc:'舅舅拉着你说，朋友手里有座石材矿的开采权，投 300 万占 30% 股，「石头从地里挖出来就是钱」。\n\n他已押上了自己的房子，就差你的 300 万。',
+ options:[
+  {t:'投 300 万', sub:'矿业是资本密集型行业，散户入股十有八九是局', fx(s){
+    if(s.cash<300*W) return '现金不足。';
+    s.cash-=300*W;
+    if(chance(0.12)){ s.biz+=500*W; addMood(8);
+      return '矿石真的出货了，两年后你的股份估值 500 万。\n\n但这种运气，和中奖一样稀少。';
+    }
+    s.scams++; s.scamLoss+=300*W; addMood(-10);
+    return '投了钱才去看：所谓矿山连开采证都没有，舅舅朋友的「公司」注册在一个居民楼里。\n\n300 万打了水漂，舅舅自己的房子也被银行收了。从此舅妈见你就哭。';
+  }},
+  {t:'帮舅舅查公司背景再说', sub:'尽调先行', fx(s){
+    addRep(3); addMood(2);
+    return '你托律师朋友查了那家公司：注册资本 10 万，法人是个 70 岁的五保户，专利采矿许可——没有。\n\n你把材料给舅舅看，他脸色从红到白。你省了 300 万，也救了舅舅的房子。';
+  }},
+  {t:'给 10 万让舅舅别赌房子', sub:'止损', fx(s){
+    if(s.cash<10*W) return '现金不足。';
+    s.cash-=10*W; addMood(-1);
+    return '你给了 10 万，说「这钱不用还，但石材厂别碰了」。\n\n舅舅收了钱，但心里不服，后来自己偷偷抵押房子投了进去——半年后房子没了。有些坑，别人替你填不了。';
+  }},
+ ]},
+{id:'sister-house', title:'妹妹想换学区房', tag:'亲友',
+ w:6, once:true, cond:s=>s.month>=5,
+ desc:'妹妹打电话来，说孩子该上学了，看中一套学区房差 80 万首付，银行贷款又卡住了。\n\n「哥，你最宽裕，帮帮我，五年内一定还。」',
+ options:[
+  {t:'借 80 万，走正规借款协议', sub:'亲兄弟明算账', fx(s){
+    if(s.cash<80*W) return '现金不足。';
+    s.cash-=80*W; addRep(4); addMood(3);
+    if(chance(0.6)) return '妹妹五年内还清了，利息没要你的。孩子上了好学校，逢年过节妹夫给你送礼都格外殷勤。\n\n这是借钱最好的结局——但前提是金额在你的承受范围内，且对方确实有还款能力。';
+    addMood(-5);
+    return '三年了，妹妹只字不提还钱。你开口问了一次，她红了眼眶：「孩子学费、房贷……你以为我不想还？」\n\n你成了坏人。80 万，亲情也搭进去了。';
+  }},
+  {t:'给 30 万，不用还', sub:'赠予代替借贷', fx(s){
+    if(s.cash<30*W) return '现金不足。';
+    s.cash-=30*W; addMood(4);
+    return '妹妹在电话里哭了。30 万不够全款，但她凑够了首付。\n\n你用 30 万买了一份不伤感情的亲情——比借 80 万最后反目高明得多。';
+  }},
+  {t:'不借，但帮她和银行沟通', sub:'出力不出钱', fx(s){
+    addMood(-2);
+    return '你陪妹妹跑了三家银行，终于有一家愿意批贷款。\n\n她对你有点怨气——「明明有钱却不帮」——但日子久了也就淡了。至少你们之间没有债务这根刺。';
+  }},
+ ]},
+{id:'neighbor-plea', title:'楼下阿姨求助', tag:'亲友',
+ w:5, once:true, cond:s=>s.month>=8,
+ desc:'楼下王阿姨端着一锅鸡汤上门：老伴走了三年，自己退休金不够看病，想借 15 万做膝关节置换手术。\n\n「我知道不该开口……可实在没有别人了。」',
+ options:[
+  {t:'给 15 万，不用还', sub:'敬老帮困', fx(s){
+    if(s.cash<15*W) return '现金不足。';
+    s.cash-=15*W; addRep(6); addMood(8);
+    return '阿姨术后能走路了，每周给你蒸一笼包子。\n\n小区里都知道你是个好人，但也有了「找他借钱准行」的名声。';
+  }},
+  {t:'帮阿姨走大病医保', sub:'制度比个人靠谱', fx(s){
+    addRep(3); addMood(4);
+    return '你陪阿姨跑了医保局和大病救助窗口，最后自己只补了 3 万的自费部分。\n\n12 万的差价，制度帮你出了。这才是正确的帮人方式：先找制度，再找自己。';
+  }},
+  {t:'婉拒', sub:'帮不了所有人', fx(s){
+    addMood(-5); addRep(-2);
+    return '阿姨走的时候背影佝偻。之后在电梯里碰到，她总是笑笑但不太说话。\n\n你知道自己帮不了所有人，但这句话并不能让心里好受一点。';
+  }},
+ ]},
+{id:'classmate-borrow', title:'老同学借钱「临时周转」', tag:'亲友',
+ w:6, cond:s=>s.month>=10,
+ desc:'微信弹出消息——高中同学，三年没说过话：「兄弟，公司资金链断了，借 50 万周转，一个月还，利息按 2 分算。」',
+ options:[
+  {t:'借 50 万', sub:'「一个月还」通常意味着不会还', fx(s){
+    if(s.cash<50*W) return '现金不足。';
+    s.cash-=50*W;
+    if(chance(0.2)){ s.cash+=55*W; addMood(3);
+      return '一个月后真还了，还多给了 5 万利息。\n\n但这种事，十次里不到两次。';
+    }
+    addMood(-6); s.friendsLost++;
+    return '一个月后，消息不回了。再追，发现你被删了好友。\n\n共同的朋友说，他找了一圈人借钱，每个都说是「临时周转」。你只是名单上的一个。';
+  }},
+  {t:'「我最近也紧」', sub:'善意的谎言', fx(s){
+    addMood(-1);
+    return '你编了个理由拒绝了。对方「哦」了一声，对话就结束了。\n\n有时候，拒绝不需要真话。';
+  }},
+  {t:'给 2 万：「不用还，算我支持」', sub:'小额定损', fx(s){
+    if(s.cash<2*W) return '现金不足。';
+    s.cash-=2*W; addMood(1);
+    return '你给了 2 万，说不用还。对方收了，说「够意思」。\n\n后来他再没找你。2 万的止损，换来了一段不撕破脸的关系。';
+  }},
+ ]},
+{id:'inlaw-request', title:'岳父/婆婆要做生意', tag:'亲友',
+ w:6, once:true, cond:s=>s.married && s.month>=12,
+ desc:'配偶的父母打来电话：有人拉他们合伙开农家乐，投 150 万，地已经看好了。\n\n配偶看着你：「他们一辈子没做过生意，我怕……但也不好拦着。」',
+ options:[
+  {t:'出 150 万，合同走你名下', sub:'以你为主，控制风险', fx(s){
+    if(s.cash<150*W) return '现金不足。';
+    s.cash-=150*W;
+    if(chance(0.15)){ s.biz+=200*W; s.bizIncome+=2*W; addMood(5);
+      return '农家乐意外地火了，周末一房难求。两年后回本，你配偶的父母逢人就夸你有魄力。';
+    }
+    s.cash+=30*W; addMood(-8);
+    return '农家乐开了半年，没客人。合伙人卷了预付金跑路，装修也烂尾了。150 万只回来 30 万清算款。\n\n配偶的脸色，比赔钱更让你难受。';
+  }},
+  {t:'出 30 万给他们练手', sub:'控制上限', fx(s){
+    if(s.cash<30*W) return '现金不足。';
+    s.cash-=30*W; addMood(-2);
+    return '你给了 30 万，说「亏了就算我孝敬的」。\n\n果然亏了。但他们也断了做生意的心——用 30 万买一个「此路不通」的认知，比 150 万便宜。';
+  }},
+  {t:'拦着不让做', sub:'但可能得罪人', fx(s){
+    addRep(-2); addMood(-3);
+    return '你坚决反对，理由是一堆。配偶的父母表面同意，心里觉得你「小气」。\n\n后来那个农家乐项目确实暴雷了，但没人来谢你——他们只会觉得「幸好没投」，而不是「幸好你拦了」。';
+  }},
+ ]},
+{id:'child-sponsor', title:'孩子同学家长借钱', tag:'亲友',
+ w:5, once:true, cond:s=>s.kids && s.month>=30,
+ desc:'孩子同学的妈妈在校门口拉住你：「我家生意出了点问题，差 40 万，能借一个月吗？都是同学家长，不会跑的。」',
+ options:[
+  {t:'借 40 万', sub:'校门口的社交压力', fx(s){
+    if(s.cash<40*W) return '现金不足。';
+    s.cash-=40*W;
+    if(chance(0.3)){ s.cash+=42*W; return '一个月后连本带息还了。但这种关系维系的还款率，全靠面子。'; }
+    addMood(-5);
+    return '一个月后，人找不到。问其他家长，说至少借了五六个人。\n\n你不敢在学校声张——孩子还要在这里上学。40 万，变成了每天接孩子时的尴尬。';
+  }},
+  {t:'拒绝：「最近刚买了理财，取不出来」', sub:'体面拒绝', fx(s){
+    addMood(0);
+    return '你笑着拒绝了。对方有点尴尬，但很快找了下一个家长。\n\n后来听说她借了好几个人的钱跑了，你出了一身冷汗。';
+  }},
+ ]},
+{id:'charity-donation', title:'慈善机构上门', tag:'亲友',
+ w:5, once:true, cond:s=>s.month>=14 && s.public,
+ desc:'一家慈善机构找到你：山区小学需要翻修，全款 120 万，他们能给你挂名「荣誉校长」。\n\n材料看上去很正规，但也有人说这家机构「管理费很高」。',
+ options:[
+  {t:'捐 120 万', sub:'慈善是好，但要查机构', fx(s){
+    if(s.cash<120*W) return '现金不足。';
+    s.cash-=120*W; addRep(10); addMood(10);
+    return '半年后收到照片：崭新的教室和笑脸。你飞过去看了一趟，是真的。\n\n120 万买到了一份确定的爱——这是中奖后花得最舒服的一笔钱。';
+  }},
+  {t:'自己去找山区学校捐', sub:'绕过中间商', fx(s){
+    if(s.cash<50*W) return '现金不足。';
+    s.cash-=50*W; addRep(6); addMood(8);
+    return '你联系了当地教育局，直接对接了一所村小。50 万修了操场和食堂，没有一分钱管理费。\n\n绕过机构直接做，效率高，但你得花时间——这也是一种成本。';
+  }},
+  {t:'婉拒', sub:'量力而行', fx(s){
+    addMood(-1);
+    return '你说再考虑考虑。对方很有礼貌地走了。\n\n你确实想帮，但不确定这家机构靠不靠谱。不确定就不做——这本身也是一种态度。';
+  }},
+ ]},
+
+/* ======== 骗局 (12) ======== */
+{id:'bank-wm', title:'银行理财经理的「专属产品」', tag:'投资',
+ w:9, once:true, cond:s=>s.month>=1,
+ desc:'银行贵宾室里，理财经理笑得很甜：「哥，您这资金量，我们有款内部产品，预期年化 8%，R2 稳健型，很多客户抢不到额度。」\n\n合同很厚，她翻得很快。',
+ options:[
+  {t:'先买 100 万试试水', sub:'看看再说', fx(s){
+    if(s.cash<100*W) return '现金不足。';
+    s.cash-=100*W;
+    if(chance(0.5)){ s.deposit+=108*W; addMood(2);
+      return '一年后本息到账 108 万，一切正常。\n\n这次没踩坑，但你始终没搞懂那款产品的底层资产是什么——没搞懂的东西下次还买，坑总会在那等你。';
+    }
+    s.scams++; s.scamLoss+=18*W; addMood(-8);
+    s.deposit+=82*W;
+    return '一年后产品「延期兑付」，折腾两年拿回 82 万。\n\n你后来才知道，所谓 R2 稳健型的底层，是一堆城投非标债。银行理财经理的 KPI 是卖出去，不是帮你赚。';
+  }},
+  {t:'全换大额存单和国债', sub:'年化 2% 出头，但本金受存款保险保护', fx(s){
+    const amt=Math.min(s.cash*0.6, 3000*W);
+    s.cash-=amt; s.deposit+=amt; addMood(3);
+    return '你把六成现金换成了大额存单和国债，年化 2% 多一点。\n\n经理的笑容淡了。但你知道：5600 万的 2%，是每年 110 多万的被动收入——躺着就跑赢了 99% 的「高收益产品」购买者。';
+  }},
+  {t:'买 500 万，收益高就多赚点', sub:'重仓「稳健理财」', fx(s){
+    if(s.cash<500*W) return '现金不足。';
+    s.cash-=500*W; s.scams++;
+    if(chance(0.3)){ s.deposit+=540*W; addMood(4);
+      return '运气好，产品正常兑付，一年赚了 40 万。\n\n但理财经理看你的眼神，像看一头养肥的羊——下次她会带着「年化 12%」的产品再来。';
+    }
+    s.scamLoss+=120*W; addMood(-12);
+    s.deposit+=380*W;
+    return '两年后产品暴雷，500 万只回来 380 万。你去银行维权，得到的答复是：「理财非存款，投资有风险。」\n\n签名是你签的，录像是你录的。这堂课学费 120 万。';
+  }},
+ ]},
+{id:'mining', title:'发小拉你投「区块链矿场」', tag:'骗局',
+ w:8, once:true, cond:s=>s.month>=2,
+ desc:'多年没联系的发小突然组局，酒过三巡掏出手机：「兄弟，我在新疆有矿场，投 100 万，月分红 8%，合同都有，我自己投了 300 万。」\n\n他手机里的收益截图红得发紫。',
+ options:[
+  {t:'投 100 万', sub:'月息 8% = 年化 96%，巴菲特年均才 20%', fx(s){
+    if(s.cash<100*W) return '现金不足。';
+    s.cash-=100*W; s.scams++;
+    if(chance(0.15)){ s.cash+=116*W; addMood(3);
+      return '前三个月分红准时到账，你赶紧找借口退出，居然全身而退还小赚 16 万。\n\n后来矿场爆雷，你出了一身冷汗——你赚的是后面进场人的本金。';
+    }
+    s.scamLoss+=100*W; addMood(-10);
+    return '前两个月分红准时到账，第三个月，发小的电话打不通了。\n\n所谓矿场就是个资金盘：用新人的钱付旧人的「分红」。你的 100 万，成了别人的收益截图。';
+  }},
+  {t:'「我不碰看不懂的东西」', sub:'能力圈原则', fx(s){
+    addMood(2);
+    return '你举杯岔开了话题。发小有点扫兴。\n\n一年后听说那个矿场爆雷，卷走两个多亿，你发小自己投的 300 万也没了——他也是受害者，只是受害者同时也在拉人头。\n\n月息 8% 的东西，本质是你的本金在别人眼里的收益。';
+  }},
+ ]},
+{id:'private-fund', title:'私募经理：年化 30%，名额有限', tag:'骗局',
+ w:7, cond:s=>s.month>=6 && totalAssetsCond(s),
+ desc:'高尔夫球场边，一位戴百达翡丽的「私募总监」递来名片：「我们这只基金去年收益 67%，起投 300 万，这个月截止。」\n\n他身后的保时捷在夕阳下闪闪发光。',
+ options:[
+  {t:'投 300 万', sub:'高收益、限量、成功人士背书——三大危险信号齐了', fx(s){
+    if(s.cash<300*W) return '现金不足。';
+    s.cash-=300*W; s.scams++;
+    if(chance(0.2)){ s.cash+=345*W; addMood(4);
+      return '第一年居然真分了 45 万。你暗自得意时，第二年基金清盘，万幸本金拿回来了。\n\n事后复盘：他们拿客户的钱梭哈小盘股，赌赢了就收高额提成，赌输了亏的是客户。你不是在投资，是在替别人赌博。';
+    }
+    s.scamLoss+=300*W; addMood(-14);
+    return '第一年季报漂亮得不像话。第二年，经理失联，办公室人去楼空。\n\n公安立案登记时你才发现，受害者名单拉出来有 200 多人，平均每人损失 300 万起——全是各个城市的「中奖者」「拆迁户」。300 万，打了水漂。';
+  }},
+  {t:'投 100 万试试', sub:'减半的赌注还是赌注', fx(s){
+    if(s.cash<100*W) return '现金不足。';
+    s.cash-=100*W; s.scams++; s.scamLoss+=70*W; addMood(-6);
+    return '「总监」面露难色：「哥，300 万起投是规定……这样吧，我帮您特批。」\n\n能为你改规则的机构，也能为钱改账本。两年后基金爆雷，你拿回了 30 万清算款。';
+  }},
+  {t:'婉拒：查不到备案的一律不碰', sub:'正规私募在中基协官网可查', fx(s){
+    addMood(2);
+    return '你回去在中基协官网查了这家机构——查无备案。\n\n三年后在社会新闻上看到他的名字：非法集资 8.6 亿，判了 12 年。新闻配图上，那辆保时捷被贴了封条。';
+  }},
+ ]},
+{id:'presale-stock', title:'「公司马上上市，原始股 3 块钱一股」', tag:'骗局',
+ w:6, once:true, cond:s=>s.month>=12,
+ desc:'饭局上，一位「老板」酒后吐真言：公司在纳斯达克借壳上市已进入倒计时，原始股 3 元/股，上市后保守 30 元。「看在朋友面子上，给你留 200 万额度。」',
+ options:[
+  {t:'买 200 万', sub:'真正的原始股轮不到饭局上的陌生人', fx(s){
+    if(s.cash<200*W) return '现金不足。';
+    s.cash-=200*W; s.scams++; s.scamLoss+=200*W; addMood(-12);
+    return '你拿到了一张精美的股权证书。\n\n三年后，「上市」遥遥无期，公司地址变成了一家打印店。股权证书裱起来都嫌占地方。\n\n记住：能随便卖给你的原始股，就不是原始股，是废纸。';
+  }},
+  {t:'「我研究下财报再定」', sub:'拖延即拒绝', fx(s){
+    addMood(1);
+    return '你客客气气要了材料，对方说「额度紧张，明天就没了」。\n\n真正的好生意不怕你尽调，怕尽调的都是局。你没再回复，后来听说那个饭局上买了的两个人，现在还在互相借钱打官司。';
+  }},
+ ]},
+{id:'pension-scam', title:'「养老公寓」返租计划', tag:'骗局',
+ w:5, once:true, cond:s=>s.month>=18,
+ desc:'邻居阿姨神秘兮兮地拉你参加一场推介会：买一间养老公寓床位 50 万，开发商包租，每年返 12% 租金，十年后原价回购。「既养老又赚钱，政府扶持项目！」\n\n会场里坐满了老人，掌声雷动。',
+ options:[
+  {t:'投 50 万', sub:'返租、回购、政府扶持——非法集资标准话术', fx(s){
+    if(s.cash<50*W) return '现金不足。';
+    s.cash-=50*W; s.scams++; s.scamLoss+=50*W; addMood(-8);
+    return '返租准时发了 14 个月。第 15 个月，开发商「资金链断裂」。\n\n你和几百位老人一起去信访，登记的表格厚得像电话簿。所谓公寓，只是一张图纸和租来的售楼处。';
+  }},
+  {t:'提醒阿姨也别买', sub:'救人一命', fx(s){
+    addRep(6); addMood(4);
+    return '你拉着阿姨算了笔账：返租 12% 还能原价回购，开发商拿这钱去干什么才能赚回来？\n\n阿姨将信将疑没买。两年后项目爆雷，阿姨提着一篮子鸡蛋来谢你——她差点投进去的是全部拆迁款。';
+  }},
+  {t:'沉默离开', sub:'多一事不如少一事', fx(s){
+    addMood(-2);
+    return '你悄悄离开了会场。两年后项目爆雷，你在维权的人群里看到了那位阿姨，她没认出你。\n\n你当时其实看穿了，只是没说。';
+  }},
+ ]},
+{id:'crypto-scam', title:'「这个币下个月上交易所」', tag:'骗局',
+ w:7, once:true, cond:s=>s.month>=8,
+ desc:'一个穿潮牌的年轻人加你微信，说是某投资基金中国区代表：他们孵化的代币下个月上头部交易所，现在私募价 0.03，上线保守 0.3。\n\n「你投 50 万，一个月后变 500 万。白皮书我发你。」',
+ options:[
+  {t:'投 50 万', sub:'币圈一天，人间一年', fx(s){
+    if(s.cash<50*W) return '现金不足。';
+    s.cash-=50*W; s.scams++;
+    if(chance(0.05)){ s.cash+=300*W; addMood(10);
+      return '真上了交易所，开盘 0.4，你 50 万变 600 万，赶紧抛了。\n\n但你知道这和买彩票一样——纯粹运气。';
+    }
+    s.scamLoss+=50*W; addMood(-10);
+    return '上线当天，代币从 0.3 跌到 0.001。项目方在 TG 群发了一句「技术问题」就消失了。\n\n你的 50 万，在一个下午蒸发。区块链不可篡改，但可以归零。';
+  }},
+  {t:'让他发白皮书看看', sub:'看不懂就别碰', fx(s){
+    addMood(0);
+    return '你翻开白皮书：3D 渲染的元宇宙地产、AI 驱动的 DeFi 协议、去中心化社交网络……\n\n什么都做的项目，等于什么都不做。你礼貌地回了一句「再看看」，对方已读不回。';
+  }},
+  {t:'拉黑', sub:'果断止损', fx(s){
+    addMood(1);
+    return '你长按对话框，点了「删除并拉黑」。\n\n后面他换了好几个号加你，你都没通过。在币圈，不被骗的方法只有一个：不参与你看不懂的局。';
+  }},
+ ]},
+{id:'art-scam', title:'「这幅画三年后翻十倍」', tag:'骗局',
+ w:5, once:true, cond:s=>s.month>=14,
+ desc:'一个文质彬彬的人邀请你参加「艺术品投资沙龙」：当代名家字画，80 万一幅，三年保守翻十倍。「比股票稳，比房产流动，还能传家。」',
+ options:[
+  {t:'买一幅 80 万', sub:'艺术品定价=故事+稀缺性，你两样都不沾', fx(s){
+    if(s.cash<80*W) return '现金不足。';
+    s.cash-=80*W; s.scams++; s.scamLoss+=70*W; addMood(-8);
+    return '你把画搬回家，很气派。三年后想出手，拍卖行说「这个画家市场不认可」，起拍价 2 万流拍。\n\n艺术品投资门槛极高：你的画值不值钱，取决于谁在卖、谁在买、谁在讲这个故事——你一个散户，就是那个被讲故事的。';
+  }},
+  {t:'「我先把画家名字记下查查」', sub:'信息不对称=定价权在对方', fx(s){
+    addMood(1);
+    return '你回去查了那个画家：美协会员，但作品市场几乎零成交记录。\n\n艺术品没有成交记录就没有市场价。80 万？他自己定的。';
+  }},
+  {t:'不去', sub:'拒绝是最好的止损', fx(s){
+    return '你没去。后来听说那个沙龙的买家们组建了一个维权群。';
+  }},
+ ]},
+{id:'overseas-invest', title:'「海外房产投资移民」', tag:'骗局',
+ w:5, once:true, cond:s=>s.month>=16,
+ desc:'中介推荐：「希腊买房 25 万欧拿永居，葡萄牙 50 万欧入籍。房产包租，身份到手，一举两得。」\n\n看上去很美，但总价 200-400 万人民币。',
+ options:[
+  {t:'投资 300 万海外房产', sub:'海外维权的成本，高于你的想象', fx(s){
+    if(s.cash<300*W) return '现金不足。';
+    s.cash-=300*W;
+    if(chance(0.3)){ s.house+=300*W; addMood(5);
+      return '房产和身份都到手了，虽然出租回报不高，但确实多了一个选择权。\n\n海外投资不是不能做，是要找靠谱中介，自己也要懂当地法律。';
+    }
+    s.scams++; s.scamLoss+=200*W; addMood(-10);
+    return '房子买到了，但是个「问题房」：位置偏远、面积缩水、包租承诺无人兑现。想维权？跨国诉讼成本比房子还贵。\n\n身份也没办下来——中介说「政策变了」。300 万，200 万打了水漂。';
+  }},
+  {t:'先去实地考察', sub:'眼见为实', fx(s){
+    addMood(2);
+    return '你飞了一趟，发现所谓「包租房产」在一个偏僻到出租车司机都找不到的地方。\n\n15 万的考察费省了 300 万的坑。这是你花过最值的差旅。';
+  }},
+  {t:'不做海外', sub:'守好能力圈', fx(s){
+    return '你没碰。海外投资的水深不在于项目本身，在于你对当地法律、税务、汇率一无所知——那是别人的主场。';
+  }},
+ ]},
+{id:'crowdfunding', title:'朋友拉你投众筹餐厅', tag:'骗局',
+ w:5, once:true, cond:s=>s.month>=10,
+ desc:'朋友在朋友圈发：「众筹开一家有温度的餐厅，每人投 20 万，占 2% 股。已有 30 人加入。」\n\n群聊里气氛热烈，每周贴装修进度。',
+ options:[
+  {t:'投 20 万', sub:'众筹=凑份子钱，不是专业投资', fx(s){
+    if(s.cash<20*W) return '现金不足。';
+    s.cash-=20*W;
+    if(chance(0.1)){ s.cash+=30*W; addMood(4);
+      return '餐厅居然经营得不错，两年后你拿回了 30 万。\n\n但你知道这纯属运气，30 个人众筹的餐厅，和一个人开餐厅的失败率是一样的。';
+    }
+    s.scamLoss+=20*W; addMood(-5);
+    return '开业三个月，因为没人真正负责经营，餐厅乱成一锅粥。大厨跑了、供应商断货、微信群吵成一团。\n\n最后清算，20 万变成 1.2 万。众筹餐厅最大的问题：每个人都有权，每个人都不负责。';
+  }},
+  {t:'不投，但去吃', sub:'当顾客不当股东', fx(s){
+    addMood(1);
+    return '你当了常客。半年后餐厅关门了，但你只是少吃了几顿饭，没少几万块。\n\n投资和消费是两件事，不要混在一起。';
+  }},
+ ]},
+{id:'stock-tip', title:'荐股群：天天涨停', tag:'骗局',
+ w:6, once:true, cond:s=>s.month>=6,
+ desc:'有人拉你进了一个「股票内部消息群」：群主每天发荐股，命中率 90%，截图晒满屏的涨停。入群费 5 万，「一个月翻倍」。',
+ options:[
+  {t:'入群，跟投 100 万', sub:'如果真有 90% 命中率，他为什么不自己炒股', fx(s){
+    if(s.cash<105*W) return '现金不足。';
+    s.cash-=5*W; s.cash-=100*W;
+    s.scams++; s.scamLoss+=100*W; addMood(-12);
+    return '前三天确实涨了，你暗喜。第四天你重仓的那只票，开盘跌停。\n\n所谓荐股群是「杀猪盘」：先让你尝甜头，等你重仓追进去，庄家出货砸盘。你的 100 万，就是被割的韭菜。\n\n群解散了，群主也消失了。';
+  }},
+  {t:'不入群，但偷看推荐', sub:'白嫖有代价', fx(s){
+    addMood(-3);
+    return '你让朋友把荐股截图给你看了，买了一只，套了 30%。\n\n免费的消息是最贵的——荐股群的票本身就是给群员接盘用的，你也没逃掉。';
+  }},
+  {t:'删掉这个群', sub:'远离一切「内部消息」', fx(s){
+    addMood(1);
+    return '你退了群。三个月后这个群被警方端了——典型的「荐股诈骗」，全国涉案 3 亿。\n\n所有「内部消息」都是外部的陷阱。';
+  }},
+ ]},
+{id:'digital-collect', title:'数字藏品：下一个比特币？', tag:'骗局',
+ w:5, once:true, cond:s=>s.month>=20,
+ desc:'一个潮流群里有人推：「某平台数字藏品首发 500 元，二级市场已经炒到 5000，限量 10000 份，手慢无。」\n\n群里的交易截图看得人眼红。',
+ options:[
+  {t:'买 100 份，5 万', sub:'空气也有泡沫', fx(s){
+    if(s.cash<5*W) return '现金不足。';
+    s.cash-=5*W; s.scams++;
+    if(chance(0.05)){ s.cash+=20*W; addMood(5);
+      return '你运气好，一个月后以 2000 的均价出了 100 份，赚了 15 万。\n\n但后来平台跑路，所有藏品归零。';
+    }
+    s.scamLoss+=5*W; addMood(-4);
+    return '一个月后，平台公告「系统升级」，交易功能关闭。你的 100 份数字藏品变成了一堆无法访问的 JPEG。\n\n数字藏品的价值取决于平台和社区，两者你都控制不了。';
+  }},
+  {t:'不碰', sub:'和 NFT 同理', fx(s){
+    return '你没参与。后来那个平台被定性为「变相非法集资」。';
+  }},
+ ]},
+{id:'metaverse-land', title:'元宇宙地块：虚拟世界房地产', tag:'骗局',
+ w:4, once:true, cond:s=>s.month>=24,
+ desc:'某元宇宙平台推销「核心地段地块」，50 万一块，「两年前隔壁地块成交价 300 万，现在是抄底良机」。',options:[
+  {t:'买一块 50 万', sub:'虚拟土地没有物理约束=没有稀缺性', fx(s){
+    if(s.cash<50*W) return '现金不足。';
+    s.cash-=50*W; s.scams++; s.scamLoss+=48*W; addMood(-8);
+    return '你买了一块「元宇宙地块」。一年后，那个元宇宙平台日活用户从 3000 跌到 50。你的地块，挂牌 5 万无人问津。\n\n元宇宙地产的价值取决于有多少人在那个虚拟世界活跃——没人，你的地就是一堆 0 和 1。';
+  }},
+  {t:'不碰', sub:'看不见的土地，看不见的价值', fx(s){
+    return '你克制住了。两年后那块地挂牌 3 万也没人要。';
+  }},
+ ]},
+
+/* ======== 消费 (8) ======== */
+{id:'porsche', title:'4S 店：保时捷 911 现车', tag:'消费',
+ w:8, once:true, cond:s=>s.month>=1,
+ desc:'路过保时捷中心，销售热情地请你试驾。引擎的轰鸣声顺着脊椎往上爬。\n\n「哥，这台落地 280 万，您这身份，配得上。」',
+ options:[
+  {t:'买！人生得意须尽欢', sub:'-280万，每月养车约1万', fx(s){
+    if(s.cash<280*W) return '现金不足。';
+    s.cash-=280*W; s.carCost+=1*W; addMood(14); addRep(2);
+    if(s.lifestyle<2) s.lifestyle=2;
+    return '提车那天你发了条朋友圈，点赞破纪录。\n\n头三个月，每次点火都心跳加速。第六个月，它变成了「那辆费油的车」。第九个月你算了笔账：保险 6 万/年、保养一次 8000、轮胎四条 2 万……\n\n多巴胺会适应，账单不会。';
+  }},
+  {t:'买辆 40 万的代步车', sub:'够用就好', fx(s){
+    if(s.cash<40*W) return '现金不足。';
+    s.cash-=40*W; s.carCost+=0.25*W; addMood(6);
+    return '你提了辆静音舒适的电车。该有的都有，开着没压力，停路边不心疼。\n\n车是工具不是身份——反正你的身份也不需要一辆车来证明了。';
+  }},
+  {t:'不买，打车更划算', sub:'一线城市打车比养车便宜', fx(s){
+    addMood(-1);
+    return '销售的脸垮了下来。\n\n你算了笔账：280 万存大额存单，一年利息 6 万多，够你每天打专车。但说实话，账算赢了，心里那个引擎声还是响了很久。';
+  }},
+ ]},
+{id:'mansion', title:'江景大平层，800 万', tag:'消费',
+ w:8, once:true, cond:s=>s.month>=3,
+ desc:'中介带您站在 42 楼的落地窗前：整条江在脚下铺开，夕阳把水面烧成金色。\n\n「这套 260 平，800 万，您全款的话业主还能让 20 万。」',
+ options:[
+  {t:'全款拿下', sub:'-780万，每月物业+维护约8千', fx(s){
+    if(s.cash<780*W) return '现金不足。';
+    s.cash-=780*W; s.house+=720*W; s.houseCost+=0.8*W; addMood(12);
+    if(s.lifestyle<3) s.lifestyle=3;
+    return '搬家第一晚，你泡了壶茶坐在落地窗前看了一夜船。\n\n房子是消费品还是资产，取决于买的价格和城市的运气。好消息是：每天醒来看到的江景，是实打实的心情收入。坏消息是：它的流动性很差，急用钱时打八折都难出手。';
+  }},
+  {t:'买套 300 万的够住就行', sub:'控制住房支出不超过资产10%', fx(s){
+    if(s.cash<300*W) return '现金不足。';
+    s.cash-=300*W; s.house+=280*W; s.houseCost+=0.3*W; addMood(6);
+    return '你买了套三室两厅，采光不错，通勤方便。\n\n剩下的 500 万留在账上继续生息。房子够住就好，钱生钱的速度才是安全感的来源。';
+  }},
+  {t:'继续租房住', sub:'房租可能还跑不赢房价跌幅', fx(s){
+    addMood(-2);
+    return '中介脸上的热情像被关掉的灯。\n\n你继续住着租来的两居室。存款一分没少，但每次搬家时你都会想：我这么有钱，为什么还在搬家？\n\n省钱和幸福之间，需要找一个平衡点。';
+  }},
+ ]},
+{id:'luxury', title:'奢侈品店的 SA 已经认识你了', tag:'消费',
+ w:6, cond:s=>s.month>=4,
+ desc:'自从上次买了块表，恒隆的 SA 每周都给你发新款。今天的推送是：限量款手袋，「全城就三只」。\n\n你的手指悬在屏幕上。',
+ options:[
+  {t:'买，12 万', sub:'消费主义的多巴胺，半衰期两周', fx(s){
+    if(s.cash<12*W) return '现金不足。';
+    s.cash-=12*W; addMood(5);
+    if(s.lifestyle<2) s.lifestyle=2;
+    return '刷卡的那一刻很爽，拆开包装的那晚也很爽。\n\n两周后，它成了衣帽间里的第 N 件。你开始明白书里那句话：「奢侈品的价格里，八成是符号费。」\n\n生活水准在悄悄升级，账单也是。';
+  }},
+  {t:'把 SA 的消息设为免打扰', sub:'物理隔绝诱惑源', fx(s){
+    addMood(1);
+    return '你长按对话框，点了「免打扰」。\n\n书里说过：意志力打不过环境，管理欲望最好的办法是别让它出现在眼前。';
+  }},
+ ]},
+{id:'yacht', title:'游艇会籍：海上的移动碎钞机', tag:'消费',
+ w:5, once:true, cond:s=>s.month>=10 && totalAssetsCond(s),
+ desc:'游艇俱乐部的销售带你看了一艘 52 尺游艇：「买断 600 万，年维护费 60 万。出海一次油费 2 万，停泊费 1.5 万/月。」\n\n甲板上，海风很舒服。',
+ options:[
+  {t:'买！这是有钱人的浪漫', sub:'买入即贬值50%，年维护费够买辆宝马', fx(s){
+    if(s.cash<600*W) return '现金不足。';
+    s.cash-=600*W; s.staffCost+=5*W; addMood(15);
+    if(s.lifestyle<3) s.lifestyle=3;
+    return '出海三次后，新鲜感消退。你发现一年用不了五次，维护费 60 万照付。\n\n两年后你想卖，二手游艇市场有价无市，300 万都没人接。游艇有个别名：海上的碎钞机。';
+  }},
+  {t:'租一次体验', sub:'15万玩一周', fx(s){
+    if(s.cash<15*W) return '现金不足。';
+    s.cash-=15*W; addMood(12);
+    return '你租了一周，从三亚开到万宁，海钓、浮潜、甲板烧烤。\n\n回来后你想通了：游艇的快乐用 15 万买到了，用 600 万只能买到 15 万的快乐+585 万的焦虑。';
+  }},
+  {t:'不去', sub:'对海无感', fx(s){
+    return '你没去。后来听说那个型号的游艇，三年后二手价跌了七成。';
+  }},
+ ]},
+{id:'watch', title:'手表柜台：这块表「能保值」', tag:'消费',
+ w:5, once:true, cond:s=>s.month>=6,
+ desc:'表店销售拿出一只热门运动款：「这块公价 18 万，二手市场已经炒到 30 万。您买了不亏，等于存钱。」\n\n柜灯打在表盘上，很亮。',
+ options:[
+  {t:'买，18 万，当投资', sub:'手表的二级市场流动性极差', fx(s){
+    if(s.cash<18*W) return '现金不足。';
+    s.cash-=18*W; addMood(6);
+    return '你戴上表，沉甸甸的。一年后想出手，二手商报 12 万。\n\n「热门款能保值」是零售端的话术，到你手里的表就是二手货，中间商赚的是你买入和卖出的价差。';
+  }},
+  {t:'买块 Apple Watch', sub:'看时间够了', fx(s){
+    if(s.cash<0.5*W) return '现金不足。';
+    s.cash-=0.5*W; addMood(3);
+    return '你戴上了 Apple Watch。同事看了一眼，没说话。\n\n你也在心里对自己说了一句：你不需要一块表来证明自己有钱——你需要一块表来告诉自己时间。';
+  }},
+  {t:'不买，手表不如黄金', sub:'真要保值，买金条', fx(s){
+    return '你没买。表是用来戴的，不是用来炒的——真要投资保值，金条比手表诚实。';
+  }},
+ ]},
+{id:'michelin', title:'米其林餐厅的常客卡', tag:'消费',
+ w:4, cond:s=>s.month>=8,
+ desc:'新开的米其林二星餐厅，人均 3800。SA 说充值 20 万送 2 万，有专属包间。\n\n你上次吃过一次，确实好吃。',
+ options:[
+  {t:'充 20 万', sub:'美食是体验，但充卡是锁定消费', fx(s){
+    if(s.cash<20*W) return '现金不足。';
+    s.cash-=20*W; addMood(5);
+    if(s.lifestyle<2) s.lifestyle=2;
+    return '你充了卡。前三个月每周去，第四个月开始两周一次，半年后一个月一次。\n\n20 万吃完了，你发现：最好吃的那顿，还是第一次。';
+  }},
+  {t:'偶尔去，不充卡', sub:'按需消费', fx(s){
+    s.cash-=0.5*W; addMood(3);
+    return '你每隔几个月去一次，每次都觉得特别好吃。\n\n稀缺感是味蕾的放大器——天天吃，松露也变蘑菇。';
+  }},
+ ]},
+{id:'travel-luxury', title:'南极旅行：25 万/人', tag:'消费',
+ w:4, once:true, cond:s=>s.month>=12,
+ desc:'旅行顾问推荐：「11 天南极半岛邮轮，专业探险队，最便宜的内舱 25 万/人。」\n\n宣传视频里，企鹅在冰面上排队。',
+ options:[
+  {t:'去！人生难得', sub:'体验型消费的性价比最高', fx(s){
+    if(s.cash<25*W) return '现金不足。';
+    s.cash-=25*W; addMood(18);
+    return '你穿越了德雷克海峡，在冰山间巡游，踩上了南极大陆。\n\n回来后你发现自己的世界观变了一点：世界比你以为的大，你比你以为的小。25 万买到的不是照片，是尺度感。';
+  }},
+  {t:'去日本看樱花，5 万', sub:'平替方案', fx(s){
+    if(s.cash<5*W) return '现金不足。';
+    s.cash-=5*W; addMood(10);
+    return '你在京都的哲学之道走了一下午，花瓣落在肩上。\n\n不一定非要去远方才有风景，但确实要走出去。5 万买到了同样的「重新看世界」的感觉。';
+  }},
+  {t:'不去，存着', sub:'宅也是一种选择', fx(s){
+    addMood(-1);
+    return '你看了几集纪录片，觉得也挺好看。但深夜翻手机时，还是有一丝后悔。\n\n有些风景，屏幕替不了。';
+  }},
+ ]},
+{id:'private-jet', title:'私人飞机包机体验', tag:'消费',
+ w:3, once:true, cond:s=>s.month>=24 && totalAssetsCond(s),
+ desc:'有人推荐你体验湾流 G650 包机：「飞一趟三亚 80 万，从值机到起飞 15 分钟。你值得这种效率。」',
+ options:[
+  {t:'包一次', sub:'80万买3小时', fx(s){
+    if(s.cash<80*W) return '现金不足。';
+    s.cash-=80*W; addMood(8);
+    if(s.lifestyle<3) s.lifestyle=3;
+    return '从登机到落地，确实丝滑。机上有人给你倒香槟，窗外云层在翼下翻涌。\n\n落地后你算了笔账：80 万 = 5600 万的 1.4%。就一次，体验过了，心里那个「私人飞机」的执念就放下了。';
+  }},
+  {t:'不，头等舱够了', sub:'边际效用在递减', fx(s){
+    addMood(1);
+    return '你订了头等舱，也很舒服。省下的 75 万，够你飞头等舱 150 次。\n\n从经济舱到头等舱是质变，从头等舱到私人飞机是量变——量变不值 80 万。';
+  }},
+ ]},
+
+/* ======== 创业 (8) ======== */
+{id:'coffee', title:'开一家梦想中的咖啡馆', tag:'创业',
+ w:6, once:true, cond:s=>s.month>=6,
+ desc:'每个有钱人都有一个咖啡馆梦。街角那家店在转让，阳光、原木、手冲……你几乎能看到自己坐在吧台后的样子。\n\n转让费+装修+设备，80 万。',
+ options:[
+  {t:'开！圆一个梦', sub:'每月预计净亏 1-2 万，但心情 +8', fx(s){
+    if(s.cash<80*W) return '现金不足。';
+    s.cash-=80*W; s.biz+=60*W; s.bizIncome-=1.5*W; addMood(8); s.used.coffee=true;
+    return '「有间咖啡馆」开业了。你学会了拉花，认识了常来的客人和附近的猫。\n\n月底一算账：亏 1 万 5。你安慰自己这叫「花钱买工位」。书里说大部分文艺小店死于「为爱发电不计成本」——你决定给爱加一条止损线。';
+  }},
+  {t:'算了，梦在脑子里更便宜', sub:'情怀是情怀，生意是生意', fx(s){
+    addMood(-2);
+    return '你在街角站了一会儿，走了。\n\n咖啡馆的账你早算过：一杯赚 8 块，一天卖 100 杯才 800，不够房租人工。想要那种下午，去别人的咖啡馆消费就好——当顾客比当老板幸福多了。';
+  }},
+ ]},
+{id:'colleague-app', title:'前同事创业：「就差你这 100 万」', tag:'创业',
+ w:7, once:true, cond:s=>s.month>=4,
+ desc:'前同事带着 BP 来找你：AI 创业项目，大厂总监背书，天使轮就差 100 万，占股 10%。\n\n「三年后上市，你这 100 万就是 3000 万。」PPT 的最后一页写着星辰大海。',
+ options:[
+  {t:'投 100 万', sub:'天使投资成功率约 4%', fx(s){
+    if(s.cash<100*W) return '现金不足。';
+    s.cash-=100*W;
+    if(chance(0.08)){ s.biz+=800*W; addMood(12);
+      return '两年后项目被大厂收购，你的股份变成 800 万退出款。\n\n你是幸运的那 4%。酒会上大家都在问你怎么看的项目，只有你知道——那不是眼光，是骰子。';
+    }
+    s.biz+=15*W; addMood(-8);
+    return '第一年产品上线数据惨淡，第二年转型，第三年创始人群里发了一篇《创业三年，我认输了》。\n\n清算拿回 15 万。天使投资的真相是：投 10 个死 9 个，剩下 1 个撑起全部收益。你只投了一个，等于抽签。';
+  }},
+  {t:'投 10 万买个参与感', sub:'控制单笔风险敞口', fx(s){
+    if(s.cash<10*W) return '现金不足。';
+    s.cash-=10*W; addMood(1);
+    return '前同事有点失望，但还是接受了。\n\n一年后项目黄了，你损失 10 万，收获了一线观察一个创业项目如何死去的全过程。这个认知，商学院卖 60 万。';
+  }},
+  {t:'拒绝：「我钱有别的安排」', sub:'不因人情做投资', fx(s){
+    addRep(-2);
+    return '气氛冷了几秒，你们聊回了以前的老板。\n\n书里写过：因为面子投出去的钱，大概率连面子一起损失。投资只有一条标准——你看不看得懂、信不信赖这个人能不能成。';
+  }},
+ ]},
+{id:'bar', title:'开一间清吧', tag:'创业',
+ w:5, once:true, cond:s=>s.month>=10,
+ desc:'朋友说有个临街铺面适合开清吧，转让+装修 120 万，鸡尾酒客单 150，每晚 40 人就回本。\n\n「你出钱我出力，三七分。」',
+ options:[
+  {t:'投 120 万', sub:'酒吧行业三年存活率不到15%', fx(s){
+    if(s.cash<120*W) return '现金不足。';
+    s.cash-=120*W; s.biz+=80*W;
+    if(chance(0.15)){ s.bizIncome+=3*W; addMood(8);
+      return '酒吧意外成了网红店，周末要排队。你每月分 3 万，朋友也干劲十足。\n\n你暗自庆幸的同时也清楚：网红的生命周期通常两年。趁赚钱，赶紧设了止损线。';
+    }
+    s.bizIncome-=2*W; addMood(-6);
+    return '开业头两个月还行。第三个月隔壁开了家更大的，抢走了七成客流。朋友开始抱怨你不管事，你说他不够专业。\n\n半年后关门，设备卖了 8 万。120 万进去，8 万出来，还赔了一段友谊。';
+  }},
+  {t:'不出钱，帮他做股东贷款', sub:'固定收益代替股权风险', fx(s){
+    if(s.cash<60*W) return '现金不足。';
+    s.cash-=60*W; s.deposit+=60*W; s.bizIncome+=0.8*W; addMood(2);
+    return '你借给他 60 万，年息 12%，比大额存单高，比股权安全。\n\n一年后酒吧关门了，但你的借款优先级高于股权，清算时先还了你。朋友亏了装修，你赚了利息，各得其所。';
+  }},
+  {t:'不碰', sub:'合伙生意最伤感情', fx(s){
+    return '你没投。后来那家酒吧开了四个月就关了。朋友没怪你——他亏的是自己的装修钱。';
+  }},
+ ]},
+{id:'bnb', title:'投资民宿：诗和远方', tag:'创业',
+ w:5, once:true, cond:s=>s.month>=8,
+ desc:'大理的朋友说有间洱海边院子转让，80 万拿下做民宿，旺季月入 8 万。\n\n照片里阳光很好，猫很肥。',
+ options:[
+  {t:'投 80 万', sub:'民宿=装修+运营+平台流量税', fx(s){
+    if(s.cash<80*W) return '现金不足。';
+    s.cash-=80*W; s.biz+=50*W;
+    if(chance(0.2)){ s.bizIncome+=2*W; addMood(6);
+      return '你请了当地一对夫妻打理，旺季满房，淡季勉强保本。一年净赚 20 万，不多但快乐。\n\n关键是你找到了靠谱的店长——这比地段更重要。';
+    }
+    s.bizIncome-=1.5*W; addMood(-5);
+    return '旺季很美，淡季空房。平台抽成 15%， cleaners 三班倒，热水器和空调轮流坏。\n\n一年算下来亏 18 万，你委托给当地管理公司后就不再管了——这叫「放养型亏损」。';
+  }},
+  {t:'不投，但每年去大理住一周', sub:'当客人当不了就当房东', fx(s){
+    s.cash-=3*W; addMood(8);
+    return '你花 3 万住了一周海景房。猫很肥，阳光很好，但你不用操心热水器和差评。\n\n你明白了：诗和远方作为消费很美，作为生意就是另一回事了。';
+  }},
+ ]},
+{id:'ecommerce', title:'做电商：赛道还在增长', tag:'创业',
+ w:5, once:true, cond:s=>s.month>=12,
+ desc:'做电商的朋友说，找到一款工厂白牌好货，投 150 万做店铺+投流，「三个月回本，一年做品类 TOP」。',
+ options:[
+  {t:'投 150 万', sub:'电商利润=流量差价，平台变规则就亏', fx(s){
+    if(s.cash<150*W) return '现金不足。';
+    s.cash-=150*W; s.biz+=100*W;
+    if(chance(0.2)){ s.bizIncome+=5*W; addMood(10);
+      return '产品爆了，日出 500 单，净利率 15%。半年回本。\n\n但你知道电商的天花板在于流量成本——一旦平台涨 CPC，利润就被吃光。趁赚钱你设了退出时间表。';
+    }
+    s.bizIncome-=2*W; addMood(-8);
+    return '投了 150 万做投流。前两个月ROI 1.2，亏但数据在涨。第三个月平台改算法，流量断崖式下跌。\n\n库存 60 万、广告费 80 万、退货堆满仓库。一年后清算，150 万剩 30 万。电商不是生意，是和平台算法对赌。';
+  }},
+  {t:'投 30 万试水', sub:'小规模验证', fx(s){
+    if(s.cash<30*W) return '现金不足。';
+    s.cash-=30*W; addMood(1);
+    return '30 万跑了两个月，ROI 0.8。你果断停了。\n\n损失 10 万，买了一个认知：这个品类的流量成本结构不支持盈利。这是最便宜的教训。';
+  }},
+  {t:'不做', sub:'电商是体力活', fx(s){
+    return '你没做。电商看着是坐在电脑前，实际是仓库、客服、售后、物流、平台罚款的汪洋大海——比上班累十倍。';
+  }},
+ ]},
+{id:'mcn', title:'MCN 机构：签几个网红', tag:'创业',
+ w:4, once:true, cond:s=>s.month>=16,
+ desc:'一个做短视频的朋友拉你做 MCN：签 10 个潜力博主，孵化 3 个就能赚。\n\n前期投入 200 万（签约费+设备+场地），你占 60%。',
+ options:[
+  {t:'投 200 万', sub:'MCN=博主的经纪公司，核心是人的生意', fx(s){
+    if(s.cash<200*W) return '现金不足。';
+    s.cash-=200*W; s.biz+=120*W;
+    if(chance(0.1)){ s.bizIncome+=8*W; addMood(10);
+      return '签的一个素人意外爆了，粉丝三个月破百万。广告接到手软。\n\nMCN 的逻辑是幂律分布：1 个头部养 10 个尾部。你赌中了头部。';
+    }
+    s.bizIncome-=3*W; addMood(-8);
+    return '10 个博主，3 个月跑了 7 个，剩下的 3 个也没起来。签约费花了，设备折旧了。\n\nMCN 最大的坑：博主红了解约，博主不红你亏钱。你花钱培养人，人红了跑路，你的投入打水漂。';
+  }},
+  {t:'不投', sub:'人的生意最难做', fx(s){
+    return '你没投。MCN 本质是「两头不对赌」：平台不保证流量，博主不保证不跑。你的钱在中间，风险最大。';
+  }},
+ ]},
+{id:'restaurant-chain', title:'餐饮连锁加盟', tag:'创业',
+ w:4, once:true, cond:s=>s.month>=18,
+ desc:'一个连锁品牌招商：「开一家门店 150 万，品牌方提供选址、培训、供应链。现有 200 家店，存活率 80%。」',
+ options:[
+  {t:'加盟一家，150 万', sub:'加盟连锁=品牌方赚加盟费>帮你赚钱', fx(s){
+    if(s.cash<150*W) return '现金不足。';
+    s.cash-=150*W; s.biz+=80*W;
+    if(chance(0.2)){ s.bizIncome+=3*W; addMood(6);
+      return '门店运营顺利，月净利 3 万，四年回本。\n\n但你知道加盟连锁的存活率数据是品牌方自己提供的——真实存活率远低于宣传。';
+    }
+    s.bizIncome-=1.5*W; addMood(-7);
+    return '开业即遇冷。品牌方的「选址团队」选了个便宜但没流量的位置，供应链价格比市场贵 20%。\n\n半年后关门，品牌方说「你运营有问题」，不退加盟费。150 万进去，30 万出来。';
+  }},
+  {t:'不加盟，自创品牌', sub:'自己摸索更累但可控', fx(s){
+    addMood(0);
+    return '你没加盟。自创品牌更累，但至少赚的亏的都是自己的——不用交加盟费给一个不管你死活的品牌方。';
+  }},
+  {t:'不做餐饮', sub:'餐饮是百术之长但九死一生', fx(s){
+    return '你没做。餐饮是所有创业里最辛苦的之一：起早贪黑、人员流动大、食安风险高、租金是死成本。有钱不代表适合做餐饮。';
+  }},
+ ]},
+{id:'training', title:'教育培训机构', tag:'创业',
+ w:4, once:true, cond:s=>s.month>=20,
+ desc:'朋友拉你办 K12 素质教育机构：编程+美术+口才，前期投入 100 万，客单价 1.5 万/年，「教育是不衰的刚需」。',
+ options:[
+  {t:'投 100 万', sub:'政策风险是教育行业最大的黑天鹅', fx(s){
+    if(s.cash<100*W) return '现金不足。';
+    s.cash-=100*W; s.biz+=60*W;
+    if(chance(0.15)){ s.bizIncome+=2*W; addMood(5);
+      return '机构经营稳健，两年回本。但你始终盯着政策风向，随时准备转型。';
+    }
+    addMood(-10); s.bizIncome-=1*W;
+    return '投入装修、招聘、获客。预收学费还没确认收入，先花掉了。\n\n半年后「双减」细则出台，非学科类也受影响。退费潮来了，你账上没那么多现金。100 万投进去，最后退费退到关门。';
+  }},
+  {t:'不投', sub:'教育行业的政策风险不可控', fx(s){
+    return '你没投。后来那个赛道确实出了政策，你朋友的机构退费退到个人破产。';
+  }},
+ ]},
+
+/* ======== 投资 (10) ======== */
+{id:'index-fund', title:'指数基金：慢慢变富的笨办法', tag:'投资',
+ w:7, cond:s=>s.month>=2,
+ desc:'你读到一个数据：长期来看，宽基指数基金年化收益约 6%-9%，但过程波动很大，可能一年跌 20%。\n\n银行利息太薄，钱放着在贬值。要不要配一点？',
+ options:[
+  {t:'分批买入 1000 万', sub:'每月波动 ±3%，长期向上', fx(s){
+    if(s.cash<1000*W) return '现金不足。';
+    s.cash-=1000*W; s.fund+=1000*W; addMood(3);
+    return '你把 1000 万分成 10 份，每月买一份。\n\n看着账户起起落落，你慢慢理解了那句话：指数基金赚的是社会进步的钱，前提是你拿得住、不被波动甩下车。';
+  }},
+  {t:'先买 200 万感受下波动', sub:'小仓位练心态', fx(s){
+    if(s.cash<200*W) return '现金不足。';
+    s.cash-=200*W; s.fund+=200*W; addMood(2);
+    return '200 万进场。第一个月跌 4%，你亏了 8 万，有点慌；第三个月涨 6%，你又觉得行。\n\n仓位小的时候，人才看得清自己的风险承受力。这是学费最低的投资者教育。';
+  }},
+  {t:'不碰股市，只存大额存单', sub:'确定性优先', fx(s){
+    const amt=Math.min(s.cash*0.5, 2500*W);
+    s.cash-=amt; s.deposit+=amt; addMood(2);
+    return '你把一半现金存成三年期大额存单，利率 2.2%。\n\n收益不高，但每一分都确定。对守财来说，「确定」二字值千金——见过太多人因为嫌利息低而亏掉本金。';
+  }},
+ ]},
+{id:'gold', title:'金店排起了长队', tag:'投资',
+ w:4, cond:s=>s.month>=8,
+ desc:'新闻里金价连创新高，楼下金店大爷大妈排到了门外。有人说「乱世买黄金」，有人说「金价已经到顶」。',
+ options:[
+  {t:'买 300 万金条压箱底', sub:'不生息，但抗极端风险', fx(s){
+    if(s.cash<300*W) return '现金不足。';
+    s.cash-=300*W; s.gold+=300*W; addMood(3);
+    return '六根金条躺进保险柜，沉甸甸的很踏实。\n\n黄金不生息，它的作用是「保险」：真到了纸币失灵的那天，它是硬通货。就当给资产买了份极端风险保险。';
+  }},
+  {t:'不追高', sub:'人山人海的地方通常没便宜占', fx(s){
+    addMood(1);
+    return '你想起书里的话：当买菜大妈都在讨论一个投资品时，好价格通常已经过去了。\n\n黄金该配，但不是在排队最长的时候。';
+  }},
+ ]},
+{id:'family-trust', title:'家族信托：1000 万起', tag:'投资',
+ w:4, once:true, cond:s=>s.month>=24 && totalAssetsCond(s),
+ desc:'私人银行的信托经理约你喝下午茶：设立家族信托，装入 1000 万，约定按月给你和家人发「工资」，债务、婚变、挥霍都动不了本金。\n\n「很多老钱都这样做。」',
+ options:[
+  {t:'设立，装入 1000 万', sub:'资产隔离，强制储蓄', fx(s){
+    if(s.cash<1000*W) return '现金不足。';
+    s.cash-=1000*W; s.deposit+=1000*W; addMood(6); s.trust=true; s.used.trust=true;
+    return '信托设立完成。从此这 1000 万有了法律防火墙：生意赔了动不了它，离婚分不走它，你自己手痒也取不出来。\n\n每月信托账户给你打 3 万「生活费」——你给自己造了一台永续的印钞机。';
+  }},
+  {t:'再想想', sub:'控制权换安全，值得权衡', fx(s){
+    return '你没当场决定。信托的核心是「放弃部分控制权，换取资产安全」，适合防挥霍、防分割，但条款复杂，找靠谱机构很重要。\n\n不急，这事值得做功课。';
+  }},
+ ]},
+{id:'bonds', title:'债券基金：稳稳的幸福？', tag:'投资',
+ w:4, cond:s=>s.month>=6,
+ desc:'理财经理推了一款债券基金：「年化 4%-5%，最大回撤 2%，比存单灵活，比基金稳。」',
+ options:[
+  {t:'配 500 万', sub:'债基不是存单，也会亏', fx(s){
+    if(s.cash<500*W) return '现金不足。';
+    s.cash-=500*W; s.fund+=500*W; addMood(2);
+    return '你配了 500 万债基。第一个月收益 0.3%，很稳。\n\n但三个月后利率上行，债基回撤 3%，你亏了 15 万。经理说「正常波动」，你心里发紧——原来「稳」也是相对的。';
+  }},
+  {t:'配 100 万', sub:'适度配置', fx(s){
+    if(s.cash<100*W) return '现金不足。';
+    s.cash-=100*W; s.fund+=100*W; addMood(1);
+    return '你配了 100 万。波动确实小，收益也确实低。\n\n债基的作用是「股市大跌时的避风港」，不是进攻工具。100 万的仓位，刚好够你感受波动又不至于心疼。';
+  }},
+ ]},
+{id:'reit', title:'REITs：不动产的碎片化投资', tag:'投资',
+ w:3, once:true, cond:s=>s.month>=14,
+ desc:'券商推荐公募 REITs：底层资产是高速公路、产业园、仓储物流，分红率 5%-7%，「等于碎片化买了一栋楼」。',
+ options:[
+  {t:'配 200 万', sub:'REITs 分红稳定但价格也波动', fx(s){
+    if(s.cash<200*W) return '现金不足。';
+    s.cash-=200*W; s.fund+=200*W; addMood(2);
+    return '你配了 200 万 REITs，每季度分红到账，很稳。\n\n但半年后市场抛售，价格跌了 15%。分红还在发，但账面浮亏让你不舒服。REITs 的分红和价格是两回事——别把分红当收益，忘了本金也会跌。';
+  }},
+  {t:'不碰', sub:'先搞懂再说', fx(s){
+    return '你没碰。REITs 是好工具，但它的底层资产逻辑、分红来源、价格驱动因素，你还没搞透。看不懂就不碰，是铁律。';
+  }},
+ ]},
+{id:'overseas-asset', title:'海外资产配置：不要把鸡蛋放一个篮子', tag:'投资',
+ w:3, once:true, cond:s=>s.month>=20 && totalAssetsCond(s),
+ desc:'理财顾问建议你配置海外资产：通过 QDII 基金买标普 500，分散单一市场风险。「5600 万全在人民币资产里，不叫分散。」',
+ options:[
+  {t:'配 500 万 QDII', sub:'汇率风险+海外市场风险', fx(s){
+    if(s.cash<500*W) return '现金不足。';
+    s.cash-=500*W; s.fund+=500*W; addMood(3);
+    return '你买了标普 500 指数 QDIF。一年后赚了 15%，但人民币也升值了 3%，实际收益 12%。\n\n海外配置的逻辑是对的，但要注意 QDII 有额度限制和汇率风险。分散不是追涨，是长期持有。';
+  }},
+  {t:'不配，守好国内', sub:'汇率和海外法规都是门槛', fx(s){
+    return '你没配。海外投资没错，但你对汇率、税务、QDII 机制的了解还不够。知识不够就先不碰——这是你第三次拒绝「看不懂的东西」了。';
+  }},
+ ]},
+{id:'stock-pick', title:'朋友推荐了一只「内幕股」', tag:'投资',
+ w:5, once:true, cond:s=>s.month>=10,
+ desc:'朋友神秘兮兮地说，某公司即将被收购，现在 12 块，收购价 18 块。「内部人说的，你投 200 万，两周赚 100 万。」',
+ options:[
+  {t:'全仓 200 万', sub:'内幕交易=违法+大概率是假消息', fx(s){
+    if(s.cash<200*W) return '现金不足。';
+    s.cash-=200*W;
+    if(chance(0.05)){ s.cash+=280*W; addMood(8);
+      return '居然真涨了，你 200 万变 280 万，赶紧跑了。\n\n但你心里清楚：这叫老鼠仓，你如果被查到，是要负法律责任的。';
+    }
+    s.scamLoss+=150*W; addMood(-12);
+    if(chance(0.1)){ s.police++; addMood(-20);
+      return '你买了 200 万。第二天，证监会公告：该公司涉嫌信披违规，股票停牌。\n\n一个月后复牌，连续跌停，你割肉出来剩 50 万。更糟糕的是，你收到了证监会的调查通知——涉嫌内幕交易。';
+    }
+    return '你全仓买入。第二天公司公告「业绩造假被立案」，连续 5 个跌停。\n\n200 万进去，50 万出来。所谓「内部人」就是个庄家，你在帮他出货。';
+  }},
+  {t:'买 20 万试试', sub:'控制赌注', fx(s){
+    if(s.cash<20*W) return '现金不足。';
+    s.cash-=20*W; s.scamLoss+=15*W; addMood(-5);
+    return '20 万买进去，两周后停牌。复牌后割肉出来剩 5 万。\n\n朋友的电话打不通了——他也是听人说的，那人也找不到了。内幕消息的链条上，每个人都是韭菜。';
+  }},
+  {t:'不碰：「内幕=违法」', sub:'法律底线', fx(s){
+    addMood(2); addRep(1);
+    return '你拒绝了。内幕交易不管真假，都是违法的——真消息你违法，假消息你被骗。\n\n两头都是死路，不碰才是活路。';
+  }},
+ ]},
+{id:'real-estate-invest', title:'投资第二套房收租', tag:'投资',
+ w:4, once:true, cond:s=>s.month>=10 && totalAssetsCond(s),
+ desc:'中介推了一套学区房， 420 万，月租 6500，租售比 1.85%。「学区房永远不会跌。」',
+ options:[
+  {t:'买 420 万', sub:'租售比不到2%=靠升值赚钱，但房价在跌', fx(s){
+    if(s.cash<420*W) return '现金不足。';
+    s.cash-=420*W; s.house+=420*W; s.houseCost+=0.3*W;
+    if(chance(0.3)){ addMood(4);
+      return '租出去收租，虽然租售比低，但房价两年后涨了 10%。\n\n你知道这是运气——房价的走势没有人能预测。';
+    }
+    addMood(-6);
+    return '买了后租客换了好几轮，维修费不断。两年后学区政策调整，对口学校变了，房价跌了 15%。\n\n420 万的房子现在值 350 万，月租还降到 5000。投资房产不是稳赚的，学区房更不是。';
+  }},
+  {t:'不买，配置 REITs 替代', sub:'不动产不等于非要买房', fx(s){
+    return '你没买。房产投资的门槛高、流动性差、政策敏感。想要不动产敞口，REITs 和地产股更灵活。';
+  }},
+ ]},
+{id:'antiques', title:'古董市场：捡漏的机会？', tag:'投资',
+ w:3, once:true, cond:s=>s.month>=22,
+ desc:'一个收藏圈的朋友带你去逛古玩城：这只宣德炉 80 万，真品市价 200 万。「帮你看好了，捡漏。」',
+ options:[
+  {t:'买 80 万', sub:'你没眼力=你就是那个「漏」', fx(s){
+    if(s.cash<80*W) return '现金不足。';
+    s.cash-=80*W;
+    if(chance(0.05)){ addMood(8);
+      return '送去拍卖行鉴定——真品！估价 150 万。\n\n你暗自庆幸，但也知道这种运气和中奖一样少。';
+    }
+    s.scams++; s.scamLoss+=75*W; addMood(-8);
+    return '你买了。后来送去鉴定：现代仿品，值 2000 块。\n\n古玩城里的东西，99% 是仿品。你以为在捡漏，其实你就是那个被捡的。';
+  }},
+  {t:'不碰', sub:'隔行如隔山', fx(s){
+    return '你没碰。古董投资需要极强的专业知识和人脉，你两样都没有。';
+  }},
+ ]},
+{id:'deposit-cd', title:'大额存单：最无聊但最安全', tag:'投资',
+ w:5, cond:s=>s.month>=3 && s.cash > 500*W,
+ desc:'银行客户经理推荐三年期大额存单，利率 2.2%，20 万起存。「保本保息，受存款保险保护。」\n\n你看着账上趴着的几千万现金。',
+ options:[
+  {t:'存 2000 万', sub:'每年利息44万，月均3.7万', fx(s){
+    if(s.cash<2000*W) return '现金不足。';
+    s.cash-=2000*W; s.deposit+=2000*W; addMood(5);
+    return '存单办好了。每年 44 万利息，每月 3.7 万到账。\n\n这是最无聊的投资，也是最让人安心的——你不亏本金，不用看盘，不用研究。5600 万存 2000 万，每年白捡 44 万，相当于每月多一份一线城市中产的工资。';
+  }},
+  {t:'存 500 万', sub:'保持流动性', fx(s){
+    if(s.cash<500*W) return '现金不足。';
+    s.cash-=500*W; s.deposit+=500*W; addMood(3);
+    return '存了 500 万三年期，剩下现金保持流动性。\n\n这是「杠铃策略」：一端极度安全（存单），一端可以冒一点风险（基金/生意），中间不碰。';
+  }},
+ ]},
+
+/* ======== 危机 (10) ======== */
+{id:'fame-trouble', title:'有人认出了你', tag:'危机',
+ w:8, once:true, cond:s=>s.face && s.month>=6,
+ desc:'（露脸领奖的后果来了）\n\n半夜接到陌生电话：「X 先生吧？我们知道你住哪，孩子上哪个幼儿园。借 500 万周转下，不然……」\n\n对方笑了两声，挂了。',
+ options:[
+  {t:'报警+搬家+请安保', sub:'-60万，安全无价', fx(s){
+    if(s.cash>=60*W) s.cash-=60*W; s.staffCost+=1.5*W; addMood(-6); addRep(1); s.blackmail++;
+    return '你当天报警，一周内搬家，请了专业安保。警方顺藤摸瓜抓到了人——一个专门盯中奖者下手的团伙。\n\n60 万加每月 1.5 万安保，买个心安。你无比怀念那个可以戴头套的机会。';
+  }},
+  {t:'不声张，自认倒霉换城市', sub:'破财消灾', fx(s){
+    s.cash-=30*W; addMood(-12); s.blackmail++;
+    return '你没报警，连夜搬去了另一座城市。30 万的搬家安置费，外加三个月的失眠。\n\n恐吓电话没再来，但那种「被盯着」的感觉，很久才散。';
+  }},
+  {t:'硬扛：「法治社会怕什么」', sub:'勇气可嘉，风险自担', fx(s){
+    if(chance(0.6)){ addMood(-4); s.blackmail++;
+      return '对方虚张声势，没再出现。你虚惊一场，但家里装了三道锁，窗帘常年拉着。\n\n安全感这东西，一旦碎过，就回不到从前。';
+    }
+    s.cash-=200*W; addMood(-16); s.blackmail++;
+    return '两周后你家被盗，损失 200 万的现金和财物。警察说：对方踩点很久了。\n\n「闷声发大财」五个字，是用无数人的教训写成的。';
+  }},
+ ]},
+{id:'gamble-debt', title:'发小欠债，债主找到你', tag:'危机',
+ w:5, once:true, cond:s=>s.public && s.month>=12,
+ desc:'发小在外面欠了 150 万赌债，债主不知道打听到你有钱，「请」你喝茶：「他还不上了，你们关系好，你看着办。」\n\n发小跪在你面前哭。',
+ options:[
+  {t:'帮还 150 万，签借款协议', sub:'救急不救赌', fx(s){
+    if(s.cash<150*W) return '现金不足。';
+    s.cash-=150*W; addRep(3); addMood(-5);
+    if(chance(0.3)){
+      return '发小真的戒了赌，去南方打工，五年后分期还清了你。\n\n这种结局，十不存一。你赌对了人。';
+    }
+    return '债清了，人没救。一年后他又出现在澳门的监控里。\n\n你终于明白：赌债是个无底洞，帮还赌债不是救人，是给赌场转账。';
+  }},
+  {t:'出 10 万让他跑路/自首，其余不管', sub:'止损线', fx(s){
+    if(s.cash>=10*W) s.cash-=10*W; addMood(-3);
+    return '你给了他 10 万和两个建议：去外地打工重新做人，或者去派出所自首让法律处理赌债（非法赌债不受保护）。\n\n他选了前者，从此很少联系。至少你没有成为赌场的间接金主。';
+  }},
+  {t:'一分钱不出', sub:'不是我的债', fx(s){
+    addRep(-5); addMood(-4); s.friendsLost++;
+    return '你拒绝了。发小恨你，村里说你冷血。\n\n几个月后听说他在外地打工还债，人倒是踏实了。有时候不帮，反而是帮。';
+  }},
+ ]},
+{id:'kidnap', title:'孩子放学没回来', tag:'危机',
+ w:0, once:true, cond:s=>s.kids && s.month>=40 && s.face,
+ desc:'下午四点，电话响了：一个变声的声音说你的孩子在他们手上。「准备 2000 万现金，不许报警，否则……」\n\n你手抖得拿不住手机。',
+ options:[
+  {t:'准备 2000 万赎金', sub:'付赎金=可能还有第二次', fx(s){
+    if(s.cash<2000*W) return '你凑不齐这么多钱，只能报警。';
+    s.cash-=2000*W; addMood(-30);
+    if(chance(0.7)){ return '孩子被释放了，但你从此活在恐惧里。每月安保费加到 5 万，孩子转学、搬家、不再用真名。\n\n你无比后悔当初为什么要露脸领奖。'; }
+    addMood(-40); s.over=true;
+    return '你交了赎金。但对方没有放人。\n\n三天后警方介入，在郊区找到了你的孩子——受了很大的惊吓，但人没事。绑匪被抓，供出他们就是看了你的领奖新闻才盯上你的。\n\n露脸领奖的代价，在最极端的时刻，以最残忍的方式收了回来。';
+  }},
+  {t:'立即报警', sub:'绑匪最怕的就是报警', fx(s){
+    addMood(-15);
+    if(chance(0.8)){ return '警方迅速出动，在高速收费站拦截了绑匪的面包车。孩子吓坏了但平安无事。\n\n你跪在地上感谢老天。从此你把所有曝光信息都删了，搬了家，孩子转了学。'; }
+    addMood(-30);
+    return '警方搜了三天，在郊区找到了孩子。孩子受惊过度需要长期心理治疗，每月治疗费 2 万。\n\n你守住了钱，但孩子心里的创伤，钱治不好。';
+  }},
+ ]},
+{id:'lawsuit', title:'你被起诉了', tag:'危机',
+ w:4, once:true, cond:s=>s.month>=20 && s.public,
+ desc:'律师函：你给一个朋友的公司做了「担保」（你不记得签过什么担保），现在朋友公司破产，债权人要你代偿 800 万。\n\n你翻出那份签字——确实是你签的，当时喝了酒说是「走个形式」。',
+ options:[
+  {t:'请律师打官司', sub:'担保签字=法律义务，很难翻', fx(s){
+    if(s.cash<30*W) return '请不起律师。';
+    s.cash-=30*W;
+    if(chance(0.15)){ addMood(6);
+      return '律师找到签字时的程序瑕疵——没有面签录像。法院最终判定担保无效。\n\n你逃过一劫。但从此你再也不签任何「走形式」的文件了。';
+    }
+    s.cash-=800*W; addMood(-20); s.sued=true;
+    return '法院判决：担保有效，你代偿 800 万。\n\n你翻遍了合同，找不到救济。签字是你签的，酒是你喝的，没人逼你。800 万，一堂「不要随便签字」的课。';
+  }},
+  {t:'和债权人和解', sub:'减少损失', fx(s){
+    s.cash-=500*W; addMood(-12); s.sued=true;
+    return '你找了中间人谈，最终和解金额 500 万。\n\n签字的教训：任何「走形式」的文件，都可能变成真实的债务。';
+  }},
+  {t:'转移资产，拒不执行', sub:'法律风险极大', fx(s){
+    addMood(-5); s.police++;
+    if(chance(0.5)){ s.cash-=800*W; addMood(-15);
+      return '法院强制执行，冻结了你名下所有资产。800 万还是赔了，外加被列入失信名单。\n\n从此你不能坐飞机、不能坐高铁、不能贷款。5600 万的中奖者，成了老赖。';
+    }
+    addMood(-15);
+    return '你把资产转给亲属，被法院认定「恶意转移」。除了 800 万债务，你还被拘留了 15 天。\n\n出来后你看着银行卡余额，第一次觉得中奖不是好事。';
+  }},
+ ]},
+{id:'tax-audit', title:'税务稽查', tag:'危机',
+ w:4, once:true, cond:s=>s.month>=24 && s.scams>=2,
+ desc:'税务局约谈你：你近两年的大额支出和收入不匹配，有几笔投资收益未申报个税。「补税加滞纳金，约 180 万。」',
+ options:[
+  {t:'补缴 180 万', sub:'配合是最优解', fx(s){
+    if(s.cash<180*W) return '现金不足，税务局会冻结资产。';
+    s.cash-=180*W; addMood(-8);
+    return '你补缴了税款和滞纳金，税务局很客气地结了案。\n\n你请了税务顾问梳理以后的税务规划。中奖后的钱，每一分都要干干净净——否则早晚要还。';
+  }},
+  {t:'请税务律师争议', sub:'可能减少但也要付律师费', fx(s){
+    s.cash-=20*W;
+    if(chance(0.4)){ s.cash-=80*W; addMood(-4);
+      return '律师帮你核减了一部分不合理的认定，最终补缴 80 万。\n\n20 万律师费+80 万补税=100 万。比 180 万少，但也很疼。';
+    }
+    s.cash-=180*W; addMood(-10);
+    return '律师争议失败，维持原认定。你交了 180 万税款+20 万律师费。\n\n有时候，配合比对抗更经济。';
+  }},
+ ]},
+{id:'health-crisis', title:'体检：不好的消息', tag:'危机',
+ w:0, once:true, cond:s=>s.month>=30 && s.mood<50,
+ desc:'复查结果：甲状腺结节增大，穿刺确诊——甲状腺癌。\n\n医生安慰你：「这是最善良的癌，手术切除即可，费用约 15 万。」\n\n但「癌」这个字，还是让你手脚冰凉。',
+ options:[
+  {t:'立刻手术，请最好的医生', sub:'15万对你是小钱', fx(s){
+    if(s.cash<15*W) return '现金不足。';
+    s.cash-=15*W; s.illness=1; addMood(-10);
+    return '手术很顺利，不需要放化疗。休养三个月后复查一切正常。\n\n你第一次面对死亡的可能性。15 万买回了命，但那三天的等待，是你人生最长的三天。';
+  }},
+  {t:'先不手术，观察三个月', sub:'拖延', fx(s){
+    s.illness=1; addMood(-15);
+    return '三个月后复查，结节增大。医生说再不手术，可能转移。\n\n你终于做了手术，但恢复期更长，心情更差。有些事，越拖越难。';
+  }},
+  {t:'用保险报销', sub:'如果有重疾险', fx(s){
+    if(s.used.insurance){ s.cash-=5*W; s.illness=1; addMood(-5);
+      return '保险赔付了手术费和康复费，你只付了 5 万自费部分。\n\n当初年缴 8 万的消费型保险，在这一刻值回票价。保险的意义不是省钱，是极端时刻的流动性。';
+    }
+    s.cash-=15*W; s.illness=1; addMood(-12);
+    return '你没有重疾险，全自费 15 万。\n\n当初保险经纪推方案时你嫌贵——现在你知道了，保险买的是「万一」。';
+  }},
+ ]},
+{id:'divorce', title:'配偶提出离婚', tag:'危机',
+ w:0, once:true, cond:s=>s.married && s.month>=36 && (s.mood<40 || s.mistress || s.drinking>=3),
+ desc:'配偶收拾了行李：「我受够了。你的世界我融不进去，你也不让我进去。」\n\n律师函随后寄到：要求分割婚内财产。',
+ options:[
+  {t:'协议离婚，各退一步', sub:'婚内财产对半分', fx(s){
+    const half = Math.round(totalAssets()*0.5);
+    s.cash -= half; s.fund = Math.round(s.fund/2); s.deposit = Math.round(s.deposit/2); s.gold = Math.round(s.gold/2);
+    s.divorced=true; s.married=false; addMood(-25);
+    if(!s.prenup && !s.trust){
+      s.house = Math.round(s.house/2); s.biz = Math.round(s.biz/2); s.bizIncome = Math.round(s.bizIncome/2);
+      return '婚内财产对半分。你眼睁睁看着 '+fmt(half)+' 被划走。\n\n如果当初做了婚前公证或家族信托，这些本可以不分割。但现在说这些晚了。';
+    }
+    addMood(-10);
+    return '因为有'+(s.prenup?'婚前公证':'家族信托')+'，你保住了大部分婚前财产。只分割了婚内收益部分。\n\n当初那些「不近人情」的决定，此刻成了救命稻草。';
+  }},
+  {t:'打官司', sub:'律师费+可能判得更多', fx(s){
+    s.cash-=50*W;
+    const split = s.prenup ? 0.2 : 0.5;
+    const amount = Math.round(totalAssets()*split);
+    s.cash -= amount; s.divorced=true; s.married=false; addMood(-30);
+    return '官司打了半年，律师费 50 万。最终判决分割婚内财产 '+fmt(amount)+'。\n\n你赢了时间但输了钱。婚姻的尽头，没有赢家。';
+  }},
+  {t:'求复合：我去改', sub:'但有些东西已经回不去', fx(s){
+    addMood(-8);
+    if(chance(0.3)){ addMood(15);
+      return '配偶给了你一次机会。你们开始做婚姻咨询，你真的在改。\n\n半年后关系修复了很多。你知道这段婚姻差点死了——有些东西，差点失去才知道值多少。';
+    }
+    s.divorced=true; s.married=false;
+    const half = Math.round(totalAssets()*0.5);
+    s.cash -= half;
+    addMood(-30);
+    return '你说会改，但三个月后配偶发现你还在重复同样的模式。\n\n第二次提出离婚时，连律师函都没寄——直接法院见。你分走了 '+fmt(half)+'，但失去的远比钱多。';
+  }},
+ ]},
+{id:'child-issue', title:'孩子变了', tag:'危机',
+ w:0, once:true, cond:s=>s.kids && s.month>=48,
+ desc:'老师约谈：孩子在攀比消费，借同学钱不还，朋友圈晒你的豪车。\n\n更让你心凉的是——孩子对同学说：「我爸有钱，不用学习。」',
+ options:[
+  {t:'严格管教+切断零花钱', sub:'亡羊补牢', fx(s){
+    addMood(-5);
+    if(chance(0.5)){ addMood(10);
+      return '你断了孩子的大额零花钱，亲自接送上学，每天检查作业。\n\n半年后孩子的态度转变了。这件事让你明白了：钱买不到教育，陪伴和约束才行。';
+    }
+    addMood(-10);
+    return '孩子叛逆得更厉害，和你大吵一架后离家出走了三天。\n\n你找到他时他在网吧。你们坐在路边吃了一碗面，孩子哭了：「你只管给钱，从来不关心我。」你无言以对。';
+  }},
+  {t:'送军事化管教学校', sub:'简单粗暴', fx(s){
+    if(s.cash>=10*W) s.cash-=10*W; addMood(-12);
+    return '你把孩子送去了管教学校。半年后回来了，表面规矩了很多，但眼里没了光。\n\n你后来才知道，那所学校有体罚。你用钱送孩子进去，又用钱把孩子的心弄丢了。';
+  }},
+  {t:'自己花时间陪', sub:'最好的教育是陪伴', fx(s){
+    addMood(8);
+    return '你推掉了所有应酬，每天陪孩子做作业、周末去爬山。三个月后孩子变了一点。\n\n你花的时间比钱值钱——这是中奖后你花得最值的一笔「投资」。';
+  }},
+ ]},
+{id:'cyber-attack', title:'你上热搜了', tag:'危机',
+ w:0, once:true, cond:s=>s.face && s.month>=30 && (s.public || s.mistress),
+ desc:'一个自媒体发了一篇：曝光你是某地彩票大奖得主，配了你的照片和住址。评论区一片狂欢：\n「所以这就是有钱人」\n「凭什么他能中」\n「查查他税」\n\n阅读量 10 万+，还在涨。',
+ options:[
+  {t:'律师函+平台投诉', sub:'但互联网有记忆', fx(s){
+    if(s.cash>=10*W) s.cash-=10*W; addMood(-10); addRep(-8);
+    return '律师函发了，文章删了。但截图已经传遍了。\n\n你被迫搬家、换手机号、孩子的学校也转了。网络暴力的伤害不在于言论本身，而在于它让你的生活被彻底打乱。';
+  }},
+  {t:'发声明道歉', sub:'公开回应', fx(s){
+    addRep(-5); addMood(-8);
+    return '你发了声明，承认中奖，表示会低调生活。评论区分两派：一派说你坦诚，一派说你炫富。\n\n你发现，公开回应是把双刃剑：它给了你话语权，但也让更多人知道你。';
+  }},
+  {t:'沉默应对', sub:'热度会过', fx(s){
+    addMood(-12); addRep(-3);
+    return '你什么都没做。一周后热度过了，但你的照片和地址永远留在了互联网的某个角落。\n\n从此你再也不发朋友圈了。';
+  }},
+ ]},
+{id:'blackmail-mistress', title:'情人要「补偿」', tag:'危机',
+ w:0, once:true, cond:s=>s.mistress && s.month>=12,
+ desc:'你养了半年的情人说她怀孕了——或者，她说如果你不给 500 万「分手费」，就把一切告诉你配偶和媒体。\n\n她拿出了你们的聊天记录。',
+ options:[
+  {t:'给 500 万封口费', sub:'有第一次就有第二次', fx(s){
+    if(s.cash<500*W) return '现金不足，她说那就走着瞧。';
+    s.cash-=500*W; s.blackmail++; addMood(-20);
+    return '你给了 500 万。三个月后她又来了：「我以为不够。」\n\n你终于明白：封口费不是终局，是开端。你被套住了。';
+  }},
+  {t:'报警：敲诈勒索', sub:'但聊天记录会曝光', fx(s){
+    addMood(-15); s.blackmail++; s.mistress=false;
+    if(chance(0.5)){ s.police++; addRep(-10);
+      return '警方以敲诈勒索立案。她被抓了，但你的隐私也在审讯中暴露了——配偶知道了，你的婚姻亮红灯。\n\n你用合法的方式摆脱了勒索，但代价是家庭和名誉。';
+    }
+    addMood(-8); addRep(-5);
+    return '警方调解后她放弃了勒索。但你的隐私成了她手里的把柄，你永远活在「她可能说出来」的恐惧里。\n\n不犯错，就没有把柄。';
+  }},
+  {t:'向配偶坦白', sub:'最难但最干净', fx(s){
+    addMood(-30); s.mistress=false;
+    return '你跪在配偶面前说了全部。配偶沉默了一夜，第二天说：「你可以走，但你得净身出户。」\n\n你失去了婚姻，但摆脱了勒索。这堂课的学费：一半身家。';
+  }},
+ ]},
+
+/* ======== 人生 (10) ======== */
+{id:'travel', title:'辞职去环球旅行？', tag:'人生',
+ w:6, once:true, cond:s=>s.month>=6 && !s.quit,
+ desc:'工位上的绿萝又黄了一片叶子。你在想：都 5600 万了，为什么还要看老板脸色？\n\n旅行博主说：环球一年，人均 100 万。',
+ options:[
+  {t:'辞职！环游世界一年', sub:'-100万，心情+25', fx(s){
+    s.quit=true; if(s.cash>=100*W) s.cash-=100*W; addMood(22); addRep(2);
+    return '你退了工位，从冰岛极光看到新西兰星空，从京都的红叶走到撒哈拉的沙。\n\n一年后回来，相册里有一万张照片，心里那个「被工作掏空」的洞填满了。\n\n但爽完之后有点空：接下来的人生，干点什么好？';
+  }},
+  {t:'辞职，但不远行，在家躺平', sub:'每月开销按生活方式走', fx(s){
+    s.quit=true; addMood(10);
+    return '你睡到自然醒，打游戏、看书、遛弯、研究菜谱。\n\n三个月后有点无聊，六个月后习惯了，一年后发现：自由这东西，需要一点事做来当锚。';
+  }},
+  {t:'不辞，工作是我的节奏感', sub:'上班不为钱，为作息', fx(s){
+    addMood(-2); addRep(2);
+    return '你照常打卡。同事不知道，他们眼里为五斗米折腰的你，折腰只是习惯。\n\n工作提供的不是工资，是结构：几点起、和谁说话、为什么忙。很多人中奖后废掉，不是因为花钱，是因为没了结构。';
+  }},
+ ]},
+{id:'marriage', title:'遇到了想结婚的人', tag:'人生',
+ w:5, once:true, cond:s=>s.month>=10 && !s.married,
+ desc:'你们在一起一年了。Ta 不知道你的存款具体数字，只知道你「条件不错」。\n\n谈婚论嫁摆在眼前，一个问题绕不开：婚前财产，要不要做公证？',
+ options:[
+  {t:'做婚前财产公证', sub:'理性但伤感情？', fx(s){
+    s.married=true; s.prenup=true;
+    if(chance(0.7)){ addMood(6); addRep(2);
+      return '你忐忑地提出来，Ta 沉默了一晚，第二天说：「应该的，那是你的运气。我嫁的是你。」\n\n你们去做了公证。出来那天阳光很好，你突然觉得，能谈钱的关系，才最干净。';
+    }
+    addMood(-10); s.married=false;
+    return 'Ta 红了眼眶：「还没结婚你就防着我？」\n\n争吵、冷战、最后分手。公证本身没错，但提出的方式错了——书里说，谈钱的关键是让对方感到被保护，而不是被防备。';
+  }},
+  {t:'再处处看', sub:'让时间回答', fx(s){
+    addMood(-2);
+    return '你把话题岔了过去。Ta 眼里闪过一丝失落。\n\n拖着也是一种回答。中奖让你多了一个心病：永远分不清别人爱的是你，还是你的卡。';
+  }},
+ ]},
+/* ======== 人生 (续) ======== */
+{id:'parents-house', title:'父母想换个电梯房', tag:'家庭',
+ w:7, once:true, cond:s=>s.month>=2,
+ desc:'你妈在电话里欲言又止：老房子六楼没电梯，你爸膝盖越来越不行，下楼买菜都费劲。\n\n「也不是要换……就是问问。」',
+ options:[
+  {t:'全款 160 万买套电梯洋房，写父母名', sub:'这大概是中奖后最值的一笔钱', fx(s){
+    if(s.cash<160*W) return '现金不足。';
+    s.cash-=160*W; addRep(10); addMood(12);
+    return '交房那天，你爸在阳台上站了很久，说「这阳台能种不少葱」。你妈逢人就夸，但被你叮嘱后只说「孩子贷款买的」。\n\n这 160 万花出去，你第一次觉得中奖是真的好。';
+  }},
+  {t:'出 50 万让他们置换', sub:'其余让他们自己想办法', fx(s){
+    if(s.cash<50*W) return '现金不足。';
+    s.cash-=50*W; addRep(4); addMood(4);
+    return '父母把老房子卖了，加上你的 50 万置换了套小电梯房。也挺好。\n\n只是偶尔你会想：明明可以全款，为什么要让老人先卖掉住了三十年的家？';
+  }},
+  {t:'「再等等，房价还在跌」', sub:'理性但有点冷', fx(s){
+    addMood(-5); addRep(-3);
+    return '你妈说「也是也是」，挂了电话。\n\n你爸的膝盖不会等房价。有些账不能只按钱算——这句话你很久以后才懂。';
+  }},
+ ]},
+{id:'driver', title:'要不要请个司机/保姆？', tag:'生活',
+ w:4, once:true, cond:s=>s.month>=6,
+ desc:'中奖后你的生活半径大了：看房、应酬、接送父母。朋友在劝你：「请个人吧，你的时间比钱值钱。」',
+ options:[
+  {t:'请保姆+偶尔代驾，每月 1.2 万', sub:'花钱买时间', fx(s){
+    s.staffCost+=1.2*W; addMood(7);
+    return '家里干净了，饭菜热乎了，你有更多时间琢磨事和陪家人。\n\n书里算过这笔账：当你的时薪超过保姆时薪，请人就赚了。';
+  }},
+  {t:'自己做，就当体验生活', sub:'省钱但耗时', fx(s){
+    addMood(1);
+    return '你继续自己买菜做饭擦地板。说实话，有点累，但也有点踏实。\n\n中奖没有改变你是谁——你提醒自己，这可能正是好事。';
+  }},
+ ]},
+{id:'insurance', title:'保险经纪人的方案', tag:'理财',
+ w:5, once:true, cond:s=>s.month>=5,
+ desc:'老同学转行做了保险经纪，给你做了一套方案：重疾险+医疗险+寿险，年缴 18 万。「你现在是有产阶层了，一场大病就能改变现金流。」',
+ options:[
+  {t:'配齐重疾+医疗，年缴 8 万', sub:'消费型优先', fx(s){
+    s.staffCost+=0.67*W; addMood(4); s.used.insurance=true;
+    return '你选了几款消费型产品，年缴 8 万，保额充足。\n\n保险的核心是杠杆，不是理财。真出事了，这几百万保额能保住你的本金不动。';
+  }},
+  {t:'全套买齐包括返还型寿险', sub:'人情单', fx(s){
+    s.staffCost+=1.5*W; addRep(2);
+    return '你签了全套方案，同学感激涕零。\n\n几年后你才明白：返还型保险的收益还不如大额存单，流动性还差。';
+  }},
+  {t:'不需要，我有 5600 万', sub:'自留风险', fx(s){
+    addMood(-1);
+    return '你说得也没错——你的现金池本身就能覆盖大病开销。\n\n只是保险的意义不只是钱，还有医疗资源：好的医疗险能帮你挂上挂不上的专家号。';
+  }},
+ ]},
+{id:'kid-school', title:'孩子的学校：国际还是公立？', tag:'家庭',
+ w:4, once:true, cond:s=>s.married && s.month>=36,
+ desc:'孩子到了上学年龄。国际学校一年 25 万，双语教学，出国直通车；对口公立是区重点，免费，但要陪写作业到崩溃。',
+ options:[
+  {t:'国际学校', sub:'每年-25万', fx(s){
+    s.kids=true; s.houseCost+=2.1*W; addMood(4);
+    return '孩子入学了。学费一年 25 万，外加游学、马术、冰球……\n\n但孩子回家叽叽喳喳说英文的样子，又让你觉得值。';
+  }},
+  {t:'公立重点', sub:'免费，费爹妈', fx(s){
+    s.kids=true; addMood(-2); addRep(2);
+    return '孩子上了公立重点。你重拾了小学数学——以及血压药。\n\n省下的 25 万/年你单独存了一笔教育金。十年后它会是孩子出国读研的全部费用。';
+  }},
+ ]},
+{id:'classmate-party', title:'同学会邀请函', tag:'社交',
+ w:6, once:true, cond:s=>s.month>=3,
+ desc:'班长在群里张罗十周年同学会。有人起哄：「让咱班首富赞助全场！」',
+ options:[
+  {t:'包场买单，不醉不归', sub:'-8万，口碑+8', fx(s){
+    if(s.cash>=8*W) s.cash-=8*W; addRep(8); addMood(6);
+    return '那晚你承包了所有账单。敬酒的人排到门口，每个人都「苟富贵勿相忘」。\n\n散场后你知道：今晚的交情，保质期到下次同学聚会。';
+  }},
+  {t:'正常 AA 参加', sub:'和从前一样', fx(s){
+    addMood(3); addRep(2);
+    return '你AA了自己的那份，和老同桌聊了一晚上孩子和工作。\n\n有人背后说你抠，更多人没把你当「有钱人」。后者正是你要的。';
+  }},
+  {t:'不去', sub:'无效社交', fx(s){
+    addMood(-3); addRep(-3);
+    return '你以出差为由推了。看着群里刷屏的照片，有点羡慕，又有点庆幸。\n\n中奖后你越来越分不清：别人找你，是找你，还是找你的钱。';
+  }},
+ ]},
+{id:'mba', title:'商学院 MBA：68 万', tag:'成长',
+ w:4, once:true, cond:s=>s.month>=12 && !s.mba,
+ desc:'你刷到商学院的招生帖：两年制 MBA，学费 68 万，同学多为企业主。评论区说「读的不是书，是人脉」。',
+ options:[
+  {t:'报名', sub:'花钱买圈子和认知', fx(s){
+    if(s.cash<68*W) return '现金不足。';
+    s.cash-=68*W; s.mba=true; addMood(6); addRep(4);
+    return '两年下来，你结识了几个做实业的同学，看懂了财报，也看清了很多「投资项目」的套路。\n\n最大收获是：当你能看懂别人怎么赚钱时，被割的概率直线下降。';
+  }},
+  {t:'在家看书学一样的', sub:'知识免费，筛选很贵', fx(s){
+    addMood(2);
+    return '你买了二十本财经书，啃完了一半。\n\n知识确实都在书里，便宜得多。只是有些东西——比如别人踩过的坑——书里不写。';
+  }},
+ ]},
+{id:'birth', title:'要不要孩子？', tag:'人生',
+ w:5, once:true, cond:s=>s.married && s.month>=18 && !s.kids,
+ desc:'配偶提起想要个孩子。你算了一下：从怀孕到大学毕业，保守估计 200 万。\n\n但有些东西不是算账能算清楚的。',
+ options:[
+  {t:'要！生命比钱重要', sub:'200万买一个宇宙的延续', fx(s){
+    s.kids=true; addMood(15);
+    return '孩子出生那天，你抱着那个皱巴巴的小东西，忽然觉得 5600 万都不如这一刻值钱。\n\n你第一次理解了「传承」的含义——不是钱的传承，是生命的。';
+  }},
+  {t:'先不急，再享受两年二人世界', sub:'推迟', fx(s){
+    addMood(3);
+    return '你们继续二人世界，旅行、看剧、睡懒觉。\n\n两年后你们决定要了。有些事不急，但也不能等太久。';
+  }},
+  {t:'丁克，有5600万够花一辈子了', sub:'另一种活法', fx(s){
+    addMood(-2);
+    return '你们决定不要孩子。5600 万两个人花，足够体面到老。\n\n只是偶尔过年看到别人家孩子满地跑，配偶眼里会闪过一丝什么。';
+  }},
+ ]},
+{id:'parents-aging', title:'父母老了', tag:'人生',
+ w:0, once:true, cond:s=>s.month>=40,
+ desc:'你妈打翻了酱油瓶，手在抖。你爸出门忘了回家的路，被邻居送回来。\n\n医生说：阿尔茨海默前兆。',
+ options:[
+  {t:'请全职护工+自己多陪', sub:'每月-2万', fx(s){
+    s.staffCost+=2*W; addMood(-8);
+    return '护工很专业，但你妈只认你。你每周回去三次，陪她看那些她忘了看了多少遍的电视剧。\n\n你终于明白：钱能买服务，买不到时间。你爸妈给你的时间，还完了没有？';
+  }},
+  {t:'送到高端养老院', sub:'专业但残忍？', fx(s){
+    s.staffCost+=3*W; addMood(-15); addRep(-3);
+    return '养老院设施很好，但你妈拉着你的手不让你走。你爸坐在轮椅上看着窗外，眼神空洞。\n\n你用钱解决了「照顾」，却解决不了「陪伴」。';
+  }},
+  {t:'接父母到自己家住', sub:'亲自照顾', fx(s){
+    addMood(-5); addMood(10);
+    return '你把父母接到家里。你爸半夜起来游走，你妈反复问同一个问题。\n\n很累，但你每天能看到他们。这可能是你中奖后花得最值的「投资」——虽然它不产生任何收益。';
+  }},
+ ]},
+{id:'health', title:'体检报告上的箭头', tag:'健康',
+ w:6, once:true, cond:s=>s.month>=8,
+ desc:'体检报告出来了：脂肪肝、甲状腺结节、尿酸高。中奖这两年，应酬、熬夜、外卖，一样没少。\n\n医生说：「都是生活方式病，还来得及。」',
+ options:[
+  {t:'请私教+营养师，一年 10 万', sub:'健康是复利的本金', fx(s){
+    if(s.cash>=10*W) s.cash-=10*W; addMood(10); s.gym=true;
+    return '一年后复查：脂肪肝消失，尿酸正常，人瘦了 12 斤。\n\n钱能买到最好的医疗资源，但买不回健康本身。这 10 万，是你今年花得最值的钱。';
+  }},
+  {t:'自己跑步注意饮食', sub:'免费但靠毅力', fx(s){
+    if(chance(0.5)){ addMood(6);
+      return '你坚持了下来：晨跑、戒宵夜、自己做饭。一年后指标好了一半。\n\n没花钱，花了毅力——而毅力对有钱人来说，往往更稀缺。';
+    }
+    addMood(-3);
+    return '跑鞋买了，健身视频收藏了，坚持了三周。\n\n没有外部约束的自律，大多死于第四个星期。';
+  }},
+  {t:'不当回事', sub:'年轻的错觉', fx(s){
+    addMood(-6);
+    return '报告被你塞进了抽屉。\n\n身体的账单从不催款，但它会连本带利，在某一天一起算。';
+  }},
+ ]},
+
+/* ======== 不良习惯 (6) ======== */
+{id:'macau', title:'「兄弟，澳门走起？」', tag:'危险',
+ w:5, once:false, cond:s=>s.month>=6,
+ desc:'饭局上有人凑过来：「周末包机去澳门，VIP 厅，见见世面？你那点资产，随便玩玩。」',
+ options:[
+  {t:'去！就玩 20 万', sub:'赌场的数学：久赌必输', fx(s){
+    if(s.cash<20*W) return '现金不足。';
+    s.macau++;
+    if(s.macau>=3){
+      const loss=Math.min(s.cash, 1500*W);
+      s.cash-=loss; addMood(-30);
+      return '第三次，你输红了眼。20 万的预算变成 200 万、800 万……凌晨四点的贵宾厅里，你输掉了 ' + fmt(loss) + '。\n\n赌场不怕你赢钱，就怕你不来。回国的飞机上，你删掉了所有联系方式，手还在抖。';
+    }
+    if(chance(0.4)){ s.cash+=15*W; addMood(8);
+      return '手气不错，赢了 15 万，你飘了。\n\n赌场让你赢，是为了让你记住赢的感觉。那种心跳，会在某个深夜召唤你再来。';
+    }
+    s.cash-=20*W; addMood(-6);
+    return '20 万三小时输光。你安慰自己「就当买了个体验」。\n\n但那种肾上腺素飙升的感觉记住了你。输钱不可怕，可怕的是你开始想「下次捞回来」。';
+  }},
+  {t:'「不去，我对数学有基本的尊重」', sub:'期望值是负的游戏', fx(s){
+    addMood(1); addRep(-1);
+    return '对方讪笑你「不够意思」。\n\n百家乐庄赢率 50.68%——就这 1.36% 的差距，盖起了澳门每一座金碧辉煌。';
+  }},
+ ]},
+{id:'drinking', title:'每晚一瓶威士忌', tag:'危险',
+ w:0, cond:s=>s.month>=12 && s.mood<55,
+ desc:'最近你养成了每晚喝半瓶的习惯。不醉，但不喝就睡不着。\n\n酒柜里的存货越来越高级，酒量也越来越大。',
+ options:[
+  {t:'继续喝，不过是酒而已', sub:'酒精是合法的慢性自杀', fx(s){
+    s.drinking++; addMood(5);
+    if(s.drinking>=3){ addMood(-15);
+      return '体检报告：肝功能异常、血压高、胃粘膜糜烂。\n\n你不在乎。酒是唯一让你觉得「生活还有点意思」的东西。但这不是生活有意思，是酒精劫持了你的多巴胺。';
+    }
+    return '又是一瓶。微醺的感觉让你放松了一小时。\n\n但醒来后，空虚更重了。';
+  }},
+  {t:'戒酒，去看心理医生', sub:'喝酒是症状不是病因', fx(s){
+    if(s.cash>=3*W) s.cash-=3*W; addMood(8); s.drinking=0;
+    return '心理医生说：你不是想喝酒，是不知道不喝酒的日子怎么过。\n\n中奖后失去目标的人，很多都掉进了酒精。你开始学着用别的东西填补空虚：运动、阅读、和人真正地交谈。';
+  }},
+ ]},
+{id:'mistress', title:'有人对你示好', tag:'危险',
+ w:0, once:true, cond:s=>s.month>=15 && s.married && s.cash>500*W && !s.mistress,
+ desc:'一个年轻漂亮的人频繁出现在你的社交圈里，对你格外殷勤。你知道对方图什么——但那种被仰望的感觉，很好。',
+ options:[
+  {t:'发展地下关系', sub:'打开了潘多拉魔盒', fx(s){
+    s.mistress=true; addMood(10);
+    return '你给自己找了一间公寓，每周去两次。刺激、新鲜、被需要。\n\n你不知道的是，这颗炸弹的引信已经点燃——它会在某个你意想不到的时刻爆炸。';
+  }},
+  {t:'克制：想想配偶和孩子', sub:'理智战胜冲动', fx(s){
+    addMood(-3); addRep(2);
+    return '你礼貌地保持了距离。\n\n不是不心动，是你知道：5600 万买不到的东西里，包括一段干净的关系和一份问心无愧。';
+  }},
+ ]},
+{id:'gaming', title:'游戏充值：又一个648', tag:'危险',
+ w:0, cond:s=>s.quit && s.month>=10 && s.mood<50,
+ desc:'辞职后你迷上了一款手游。氪金、抽卡、冲榜……一个月充了 8 万。\n\n游戏里的你是全服第一，现实里的你三天没洗澡。',
+ options:[
+  {t:'继续氪，反正有钱', sub:'虚拟成就感是糖衣毒药', fx(s){
+    s.cash-=8*W; addMood(3);
+    if(chance(0.3)){ addMood(-10);
+      return '你在游戏里花了一个月工资等于 80 万。服务器第一了。\n\n然后新版本更新，你的装备全部淘汰。你的投入归零——和现实中的赌博没有本质区别。';
+    }
+    return '又是 8 万。你安慰自己「比赌钱强」。\n\n但游戏设计的成瘾机制和赌场一样：先给你甜头，再让你停不下来。';
+  }},
+  {t:'卸载游戏，找点真实的事做', sub:'虚拟成就≠真实价值', fx(s){
+    addMood(5);
+    return '你卸载了所有游戏。戒断反应持续了两周：无聊、焦躁、想重新装回来。\n\n第三周你开始学做菜，第四周你开始跑步。真实的多巴胺比虚拟的持久。';
+  }},
+ ]},
+{id:'collecting', title:'收藏：什么都能炒', tag:'危险',
+ w:4, once:true, cond:s=>s.month>=20,
+ desc:'朋友带你去一个「收藏圈」的沙龙：球鞋、潮玩、手办、名酒……每个品类都有人讲得头头是道，价格节节攀升。\n\n「这不叫消费，叫投资。」',
+ options:[
+  {t:'投入 50 万买潮玩', sub:'潮玩的二级市场=另一个赌场', fx(s){
+    if(s.cash<50*W) return '现金不足。';
+    s.cash-=50*W;
+    if(chance(0.1)){ addMood(5);
+      return '你买的一批限量款半年涨了 40%。你觉得自己有眼光。\n\n但你知道潮玩市场的流动性极差——挂牌价不等于成交价。';
+    }
+    addMood(-6);
+    return '一年后潮玩市场降温，你的藏品挂牌价腰斩。想卖找不到买家，不卖占着空间。\n\n收藏和投资的区别：收藏为喜欢，投资为增值。你两边都不是，你是被割的。';
+  }},
+  {t:'买一两件自己真喜欢的', sub:'消费心态', fx(s){
+    s.cash-=3*W; addMood(6);
+    return '你买了两件真心觉得好看的手办，摆在书架上。\n\n不为升值，只为看着开心。这才是收藏的正确打开方式。';
+  }},
+  {t:'不碰', sub:'看不懂的局不进', fx(s){
+    return '你没碰。所有「什么都能炒」的时代，最后都是一批散户被割。';
+  }},
+ ]},
+{id:'spending-spree', title:'购物狂欢节', tag:'危险',
+ w:4, cond:s=>s.month>=8 && s.lifestyle>=2,
+ desc:'双11，你的购物车里有 200 万的东西：名表、珠宝、限量款……付款页面上数字跳动着。',
+ options:[
+  {t:'全买了！', sub:'消费快感半衰期两周', fx(s){
+    if(s.cash<200*W) return '现金不足。';
+    s.cash-=200*W; addMood(12);
+    if(s.lifestyle<3) s.lifestyle=3;
+    return '拆快递的快感持续了三天。第四天，你看着满屋子的东西，感到一阵空虚。\n\n消费主义的核心机制：让你误以为「拥有」等于「快乐」。但拥有只是瞬间，空虚才是常态。';
+  }},
+  {t:'只买真正需要的', sub:'理性消费', fx(s){
+    s.cash-=5*W; addMood(3);
+    return '你只买了日常用品和几件换季衣服。省下的 195 万继续在账上生息。\n\n克制带来的满足感，比放纵更持久。';
+  }},
+  {t:'把钱捐给山区小学', sub:'替代性满足', fx(s){
+    if(s.cash>=50*W) s.cash-=50*W; addRep(8); addMood(15);
+    return '你把购物预算的 50 万捐给了山区小学。收到孩子们画的感谢卡，铺了满床。\n\n这 50 万买到的快乐，比 200 万的购物车多十倍。';
+  }},
+ ]},
+
+/* ======== 黑色事件 (6) ======== */
+{id:'framed', title:'有人冒充你诈骗', tag:'黑色',
+ w:0, once:true, cond:s=>s.month>=30 && (s.face||s.public),
+ desc:'派出所打来电话：有人用你的名义诈骗 200 万，受害者报案了。\n\n警方找你配合调查。你的身份信息被盗用了。',
+ options:[
+  {t:'全力配合调查，自证清白', sub:'清者自清但费时费力', fx(s){
+    addMood(-12); s.cash-=10*W;
+    return '调查持续了三个月，你跑了无数次派出所。最终真凶落网——一个专门盗用中奖者信息的团伙。\n\n你虽然洗清了嫌疑，但三个月的焦虑和精力消耗，是钱补不回来的。';
+  }},
+  {t:'请律师全程处理', sub:'-20万但省心', fx(s){
+    if(s.cash<20*W) return '现金不足。';
+    s.cash-=20*W; addMood(-6);
+    return '律师全权处理，你只去了一次派出所做笔录。\n\n三个月后案件告破，你只是配合了调查。露脸领奖的信息暴露，是这件事的根源。';
+  }},
+ ]},
+{id:'identity-theft', title:'你的银行卡被复制了', tag:'黑色',
+ w:0, once:true, cond:s=>s.month>=20,
+ desc:'银行短信：您尾号 xxxx 的卡在境外消费 80 万。你卡在钱包里。\n\n你的卡信息被盗了。',
+ options:[
+  {t:'立即挂失+报警', sub:'银行有盗刷赔付', fx(s){
+    addMood(-8);
+    if(chance(0.7)){ return '银行确认盗刷，72 小时内全额赔付 80 万。\n\n你换了一张新卡，开启了境外消费限额。但那种「钱随时可能消失」的感觉，留下了阴影。'; }
+    s.cash-=80*W; addMood(-12);
+    return '银行以「无法确认是盗刷」为由拒绝赔付。80 万不翼而飞。\n\n你起诉了银行，官司打了两年。最终赢了，但律师费花了 15 万。';
+  }},
+  {t:'自认倒霉', sub:'80万买个教训', fx(s){
+    s.cash-=80*W; addMood(-10);
+    return '你挂失了卡，但 80 万已经没了。报警后追回概率很低——境外盗刷团伙在东南亚。\n\n从此你所有银行卡都开了消费限额和通知提醒。';
+  }},
+ ]},
+{id:'sued-guarantor', title:'朋友让你签个字「走个形式」', tag:'黑色',
+ w:5, once:true, cond:s=>s.month>=15,
+ desc:'朋友公司贷款 500 万，银行要求一个担保人。「就签个字，走个形式，不会让你承担的。」\n\n合同厚得像砖头，翻不完。',
+ options:[
+  {t:'签字', sub:'担保=你的全部身家做赌注', fx(s){
+    if(chance(0.15)){ addMood(2);
+      return '朋友公司经营正常，贷款按期还清。你签的那个字，最终只是签了个字。\n\n但你知道，那 15% 的成功率背后，是 85% 的担保人替人背了锅。';
+    }
+    s.cash-=500*W; addMood(-20); s.sued=true; s.friendsLost++;
+    return '朋友公司半年后破产，银行找上了你：连带担保责任，代偿 500 万。\n\n你的资产缩水 500 万，朋友躲到了外地。签字那天他说「走个形式」，此刻那四个字变成了 500 万的账单。';
+  }},
+  {t:'不签：「担保是不写金额的借款」', sub:'拒绝是最好的保护', fx(s){
+    addRep(-2);
+    return '你拒绝了。朋友脸色不太好看，说「不够意思」。\n\n两年后他公司破产，担保人——他另一个签了字的朋友——被法院执行了 500 万。你暗自庆幸，也彻底明白了：担保的本质是替别人扛雷。';
+  }},
+ ]},
+{id:'robbed', title:'家里进了贼', tag:'黑色',
+ w:0, once:true, cond:s=>s.month>=12 && s.face,
+ desc:'出差回来，家门虚掩。保险柜被撬了，名表、现金、首饰——损失约 120 万。\n\n监控被提前破坏了。',
+ options:[
+  {t:'报警+升级安保', sub:'亡羊补牢', fx(s){
+    s.cash-=120*W; s.staffCost+=1.5*W; addMood(-10);
+    if(chance(0.3)){ s.cash+=80*W; addMood(5);
+      return '警方一个月后破案，追回了 80 万的赃物。\n\n你请了 24 小时安保系统，从此再也没睡过一个安稳觉——不是因为危险，是因为知道了危险离自己有多近。';
+    }
+    return '案子立了，但失物没追回来。你请了安保公司，每月 1.5 万。\n\n露脸领奖的代价，在你以为已经安全了之后，又收了一次。';
+  }},
+  {t:'认倒霉，不报了', sub:'怕报复', fx(s){
+    s.cash-=120*W; addMood(-15);
+    return '你没报警，怕对方知道你家底细后报复。\n\n120 万的损失，外加从此换了城市住。你开始理解为什么很多中奖者最终隐姓埋名。';
+  }},
+ ]},
+{id:'fire', title:'半夜火警', tag:'黑色',
+ w:0, once:true, cond:s=>s.month>=18 && s.house>0,
+ desc:'凌晨三点，烟雾报警器响了。厨房电线老化起火，火势蔓延到客厅。\n\n消防员赶到时，客厅已经烧了一半。',
+ options:[
+  {t:'修复+重新装修', sub:'保险赔不赔看条款', fx(s){
+    s.cash-=50*W; addMood(-10);
+    if(s.used.insurance){ s.cash-=5*W; addMood(-3);
+      return '保险赔了大部分，你自费 5 万。火灾后的修复用了三个月，期间你住酒店。\n\n当初买的财产险，在这一刻值回票价。';
+    }
+    return '你没买财产险，全部自费 50 万修复。住了三个月酒店，又花了 15 万。\n\n房产不只是资产，还是需要维护和保险的消费品。';
+  }},
+  {t:'卖了房子换一套', sub:'止损', fx(s){
+    s.cash+=s.house*0.7; s.house=0; s.houseCost=0; addMood(-8);
+    return '你把过火的房子折价卖了，亏了 30%。\n\n换了一套新的。但那种半夜闻到烟味的恐慌，持续了大半年。';
+  }},
+ ]},
+{id:'hacked', title:'你的手机被黑了', tag:'黑色',
+ w:0, once:true, cond:s=>s.month>=20 && s.public,
+ desc:'你的手机突然收到验证码轰炸，然后银行 App 弹出异常登录。你的照片、通讯录、银行短信全在别人手里。\n\n黑客发来消息：「转账 100 万，否则把你的中奖信息和隐私照片发给所有人。」',
+ options:[
+  {t:'立即报警+冻结所有账户', sub:'和黑客抢时间', fx(s){
+    addMood(-15); s.cash-=5*W;
+    if(chance(0.7)){ return '你报警、冻卡、换手机号。黑客没来得及转走钱，但你的通讯录被群发了中奖信息。\n\n你被迫向亲友解释、向银行证明身份。折腾了两个月才恢复正常。'; }
+    s.cash-=30*W; addMood(-10);
+    return '你冻卡的速度慢了一步，黑客转走了 30 万。警方立案但跨国追赃困难。\n\n你的隐私照片和中奖信息被发给了通讯录里的人，社会关系崩塌了一大半。';
+  }},
+  {t:'给 100 万封口费', sub:'有第一次就有无数次', fx(s){
+    s.cash-=100*W; addMood(-20); s.blackmail++;
+    return '你转了 100 万。一周后对方又来了：「再 100 万。」\n\n你终于明白：付钱不是终局，是开始。你选择了报警，但你的信息已经被卖了三轮。';
+  }},
+ ]},
+
+/* ======== 心理/日常 (4) ======== */
+{id:'bored', title:'第 N 次睡到中午', tag:'心理',
+ w:0, cond:s=>s.quit && s.mood<50,
+ desc:'辞职后的第不知道多少天。下午两点醒来，外卖盒子堆在门口，游戏打腻了，短视频刷到想吐。\n\n有钱有闲，但你感到一种说不出的空。',
+ options:[
+  {t:'找点事做：学技能/做公益/小项目', sub:'意义感是刚需', fx(s){
+    addMood(12);
+    return '你给自己排了课表：上午学东西，下午做点小事，周末去做公益。\n\n忙起来之后，那种空虚感退了。人需要的不是「什么都不干」，而是「干自己选的事」——这是自由和不自由真正的区别。';
+  }},
+  {t:'继续躺', sub:'空虚也是一种自由？', fx(s){
+    addMood(-6);
+    return '你又躺了一个月。\n\n存款在涨（利息），生命力在跌。有研究说，中奖者的幸福感会在一年后回到原点——你现在信了。';
+  }},
+ ]},
+{id:'market-crash', title:'股市大跌 20%', tag:'市场',
+ w:0, once:false, cond:s=>s.fund>0,
+ desc:'打开账户，一片惨绿：你的基金这个月跌了 20%。\n\n财经博主们分成两派：一派喊「熊市来了快跑」，一派喊「黄金坑，加仓」。',
+ options:[
+  {t:'割肉离场', sub:'把浮亏变成实亏', fx(s){
+    const loss=s.fund*0.05; s.cash+=s.fund*0.95; s.fund=0; addMood(-8);
+    return '你清空了所有基金，「至少保住了剩下的」。\n\n三个月后市场反弹 30%。你卖在了最低点——这就是追涨杀跌的标准剧本。';
+  }},
+  {t:'装死不动', sub:'指数不死，波动终将过去', fx(s){
+    addMood(-3);
+    return '你关掉 App，该干嘛干嘛。\n\n历史数据说：宽基指数持有十年以上，亏损的概率趋近于零。你的对手不是市场，是自己的手。';
+  }},
+  {t:'加仓 200 万', sub:'别人恐惧我贪婪', fx(s){
+    if(s.cash<200*W) return '现金不足。';
+    s.cash-=200*W; s.fund+=200*W; addMood(2);
+    return '你逆势加仓 200 万。\n\n这个动作对不对，要一年后才见分晓。但能用「计划」代替「情绪」做决定，你已经赢过了 90% 的散户。';
+  }},
+ ]},
+{id:'mood-boost', title:'平淡的一个月', tag:'日常',
+ w:12, cond:s=>true,
+ desc:'这个月没发生什么大事。利息按时到账，生活按部就班。\n\n你在阳台上喝了杯茶，忽然觉得「平静」才是中奖带给你的最大奢侈品。',
+ options:[
+  {t:'享受这份平静', sub:'无波无澜即是福', fx(s){
+    addMood(4);
+    const p=monthlyPassive();
+    if(p>monthlyCost()) return '这个月被动收入已经完全覆盖开销了。你正式进入了「钱在替你上班」的状态。';
+    return '日子安静流淌。你翻了几页书，散了几次步，和父母通了两次长电话。\n\n很多人追求财富是为了刺激，到最后才发现为的是这份平静。';
+  }},
+ ]},
+{id:'lifestyle-creep', title:'生活水准在悄悄攀升', tag:'心理',
+ w:4, once:false, cond:s=>s.lifestyle>=2 && s.month>=10,
+ desc:'你发现：以前觉得贵的东西，现在不觉得贵了。米其林从「偶尔」变成「每周」，衣服从「够穿」变成「每季换新」。\n\n你的月支出，已经是中奖前的五倍。',
+ options:[
+  {t:'主动降级，回到宽裕水准', sub:'防微杜渐', fx(s){
+    s.lifestyle=2; addMood(-3); addMood(5);
+    return '你砍掉了三分之一的月支出。刚开始不习惯，一个月后觉得也挺好。\n\n消费降级的痛苦持续两周，财务自由的进度条永远向前。';
+  }},
+  {t:'维持现状，我赚得起', sub:'月支出的基线在抬高', fx(s){
+    addMood(1);
+    const ratio = monthlyCost()/monthlyPassive();
+    if(ratio>0.8){ addMood(-5);
+      return '你的月支出已经快赶上月被动收入了。一旦收益波动，你就得动本金。\n\n这不是享受，是在走钢丝。';
+    }
+    return '你的被动收入还撑得住。但你心里清楚，消费的基线一旦上去，就很难下来。';
+  }},
+ ]},
+];
+
+
+// ---------- 渲染 ----------
+const app = document.getElementById('app');
+const tlBar = document.getElementById('tl-bar');
+
+function updateTimeline(){ if(tlBar) tlBar.style.width = Math.min(100, S.month/120*100) + '%'; }
+
+function hudHTML(){
+  const total = totalAssets();
+  const passive = monthlyPassive();
+  const cost = monthlyCost();
+  const net = passive - cost;
+  const year = Math.floor(S.month/12), mon = S.month%12;
+  return `
+  <div class="hud">
+    <div class="cell"><div class="k">时间</div><div class="v small">${S.month===0?'序章':'第'+year+'年'+(mon||12)+'月'}</div></div>
+    <div class="cell"><div class="k">总资产</div><div class="v">${fmt(total)}</div></div>
+    <div class="cell"><div class="k">月被动收入</div><div class="v small" style="color:var(--green)">${fmt(passive)}</div></div>
+    <div class="cell"><div class="k">月支出</div><div class="v small" style="color:var(--red)">${fmt(cost)}</div></div>
+  </div>
+  <div class="bars">
+    <div class="bar-box"><div class="k"><span>心情</span><span>${Math.round(S.mood)}</span></div><div class="bar mood"><i style="width:${S.mood}%"></i></div></div>
+    <div class="bar-box"><div class="k"><span>口碑</span><span>${Math.round(S.rep)}</span></div><div class="bar rep"><i style="width:${S.rep}%"></i></div></div>
+  </div>
+  <div class="assets">
+    <span class="asset-chip">现金 <b>${fmt(S.cash)}</b></span>
+    <span class="asset-chip">存单/信托 <b>${fmt(S.deposit)}</b></span>
+    <span class="asset-chip">基金 <b>${fmt(S.fund)}</b></span>
+    ${S.gold?`<span class="asset-chip">黄金 <b>${fmt(S.gold)}</b></span>`:''}
+    ${S.house?`<span class="asset-chip">房产 <b>${fmt(S.house)}</b></span>`:''}
+    ${S.biz?`<span class="asset-chip">生意 <b>${fmt(S.biz)}</b></span>`:''}
+    <span class="asset-chip">月净流 <b style="color:${net>=0?'var(--green)':'var(--red)'}">${fmtd(net)}</b></span>
+  </div>`;
+}
+
+function logHTML(){
+  const items = S.log.map(l=>`<div>${l}</div>`).join('');
+  return `<div class="log-toggle" onclick="document.getElementById('logbox').classList.toggle('show')">📜 收支与事件流水（点击展开）</div>
+  <div class="log" id="logbox">${items||'<div>暂无</div>'}</div>`;
+}
+
+function showHero(){
+  app.innerHTML = `
+  <div class="hero">
+    <div class="emoji">🎰</div>
+    <h1>中了7000万</h1>
+    <div class="sub">一款「中奖后人生」模拟游戏 · 10年120个月 · 87个事件 · 12种结局</div>
+    <div class="money">¥ 70,000,000</div>
+    <div class="sub">偶然所得税 20% · 到手 <b style="color:var(--gold)">5600 万</b></div>
+    <br>
+    <button class="btn-main" onclick="startGame()">开 奖</button>
+    <ul class="tips">
+      <li>每月遇到一个事件，做出你的选择</li>
+      <li>守住四样指标：总资产 / 被动收入 / 心情 / 口碑</li>
+      <li>被动收入 &gt; 支出 = 财富自由</li>
+      <li>小心：入狱、破产、离婚分割、被骗、被绑架、酗酒、众叛亲离……</li>
+      <li>现实中 70% 的彩票大奖得主在几年内破产——你会是例外吗？</li>
+    </ul>
+  </div>`;
+}
+
+let pendingEvent = null;
+
+function pickEvent(){
+  if (S.month === 0 && !S.used.mask) return EVENTS.find(e=>e.id==='mask');
+  if (S.month === 0 && !S.used.secret) return EVENTS.find(e=>e.id==='secret');
+  for (const e of EVENTS){
+    if (e.w===0 && e.cond(S) && !(e.once && S.used[e.id])){
+      if (e.id==='market-crash' && S.crashFlag){ S.crashFlag=false; return e; }
+      if (e.id==='bored' && S.quit && S.mood<50 && chance(0.5)) return e;
+      if (e.id==='kidnap' && !S.used.kidnap) return e;
+      if (e.id==='fire' && !S.used.fire && chance(0.8)) return e;
+      if (e.id==='hacked' && !S.used.hacked && chance(0.8)) return e;
+      if (e.id==='robbed' && !S.used.robbed && chance(0.8)) return e;
+      if (e.id==='framed' && !S.used.framed && chance(0.8)) return e;
+      if (e.id==='identity-theft' && !S.used.identity_theft && chance(0.8)) return e;
+      if (e.id==='divorce' && !S.used.divorce && chance(0.8)) return e;
+      if (e.id==='child-issue' && !S.used.child_issue && chance(0.8)) return e;
+      if (e.id==='cyber-attack' && !S.used.cyber_attack && chance(0.8)) return e;
+      if (e.id==='blackmail-mistress' && !S.used.blackmail_mistress && chance(0.8)) return e;
+      if (e.id==='health-crisis' && !S.used.health_crisis && chance(0.8)) return e;
+      if (e.id==='parents-aging' && !S.used.parents_aging && chance(0.8)) return e;
+      if (e.id==='bored' && !S.used.bored) return e;
+      if (e.id==='mistress' && !S.used.mistress) return e;
+      if (e.id==='drinking' && !S.used.drinking) return e;
+      if (e.id==='gaming' && !S.used.gaming) return e;
+    }
+  }
+  const pool = EVENTS.filter(e=>(e.w||0)>0 && e.cond(S) && !(e.once && S.used[e.id]) && e.id!==S.lastEvent);
+  let totalW = pool.reduce((a,e)=>a+e.w,0);
+  if(pool.length===0) return EVENTS.find(e=>e.id==='mood-boost');
+  let r = Math.random()*totalW;
+  for (const e of pool){ r-=e.w; if(r<=0) return e; }
+  return pool[pool.length-1];
+}
+
+function showEvent(e){
+  pendingEvent = e;
+  S.used[e.id] = true;
+  S.lastEvent = e.id;
+  updateTimeline();
+  const opts = e.options.map((o,i)=>`<button class="opt" onclick="choose(${i})">${o.t}<span class="sub">${o.sub||''}</span></button>`).join('');
+  app.innerHTML = hudHTML() + `
+  <div class="card">
+    <span class="tag">${e.tag||'事件'}</span>
+    <h2>${e.title}</h2>
+    <p>${e.desc.replace(/\n/g,'<br>')}</p>
+  </div>
+  <div class="opts">${opts}</div>
+  ` + logHTML();
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+function choose(i){
+  const e = pendingEvent;
+  const before = {total: totalAssets(), mood: S.mood, rep: S.rep};
+  const result = e.options[i].fx(S) || '……';
+  const after = {total: totalAssets(), mood: S.mood, rep: S.rep};
+
+  const diffs = [];
+  const dT = after.total-before.total;
+  if (Math.abs(dT) > 1) diffs.push(`<span class="${dT>=0?'up':'down'}">资产 ${fmtd(dT)}</span>`);
+  const dM = after.mood-before.mood;
+  if (dM) diffs.push(`<span class="${dM>=0?'up':'down'}">心情 ${dM>=0?'+':''}${Math.round(dM)}</span>`);
+  const dR = after.rep-before.rep;
+  if (dR) diffs.push(`<span class="${dR>=0?'up':'down'}">口碑 ${dR>=0?'+':''}${Math.round(dR)}</span>`);
+  if (!diffs.length) diffs.push('<span class="flat">无变化</span>');
+
+  say(`【${e.title}】${e.options[i].t}`);
+
+  const moodDrop = dM < -10;
+  const assetDrop = dT < -500*W;
+
+  app.innerHTML = hudHTML() + `
+  <div class="card${moodDrop||assetDrop?' shake':''}">
+    <span class="tag">${e.tag||'事件'}</span>
+    <h2>${e.title}</h2>
+    <p><em>你的选择：${e.options[i].t}</em></p>
+  </div>
+  <div class="diff">${diffs.join('')}</div>
+  <div class="result${moodDrop||assetDrop?' danger':''}">${result.replace(/\n/g,'<br>')}</div>
+  <button class="btn-main" onclick="nextMonth()">继续 →</button>
+  ` + logHTML();
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+function nextMonth(){
+  if (S.month===0 && !S.used.secret){ showEvent(EVENTS.find(e=>e.id==='secret')); return; }
+
+  S.month++;
+  updateTimeline();
+
+  const passive = monthlyPassive();
+  const cost = monthlyCost();
+  S.cash += passive - cost;
+
+  if (S.fund > 0){
+    const r = rnd(-0.04, 0.045);
+    S.fund *= (1+r);
+    if (chance(0.06) && S.fund > 100*W){ S.fund *= 0.8; S.crashFlag = true; }
+  }
+  if (S.gold > 0) S.gold *= (1 + rnd(-0.005, 0.008));
+  S.mood += (60 - S.mood)*0.03;
+  if (S.lifestyle===3) S.mood -= 0.5;
+
+  // ---- 结局判定 ----
+  if (totalAssets() <= 0){ return showEnding('bankrupt'); }
+  if (S.mood <= 0){ return showEnding('depress'); }
+  if (S.macau >= 4){ return showEnding('gambler'); }
+  if (S.police >= 2){ return showEnding('prison'); }
+  if (S.blackmail >= 3){ return showEnding('kidnapped'); }
+  if (S.drinking >= 4){ return showEnding('alcoholic'); }
+  if (S.scamLoss >= 3000*W){ return showEnding('scam-wiped'); }
+  if (S.friendsLost >= 5){ return showEnding('betrayed'); }
+  if (S.illness > 0 && S.cash < 20*W && S.month >= 35){ return showEnding('illness'); }
+  if (S.month >= 120){ return showEnding(); }
+
+  showEvent(pickEvent());
+}
+
+function showEnding(force){
+  S.over = true;
+  updateTimeline();
+  const total = Math.max(0, totalAssets());
+  const passive = monthlyPassive();
+  let rank, emoji, comment, dark=false;
+
+  if (force==='bankrupt'){
+    rank='破产结局'; emoji='💸'; dark=true;
+    comment='钱花完了。领奖那天你以为这是一生的终点，结果只是几年狂欢的起点。\n\n现实中，约 70% 的大奖得主在几年内破产——你成了统计数据的一部分。\n\n你开始理解：中奖不是天上掉馅饼，是天上掉了一块能砸死人的金砖。';
+  } else if (force==='depress'){
+    rank='空心人结局'; emoji='🌧'; dark=true;
+    comment='钱还在，人垮了。长期的心情归零让你失去了起床的理由。\n\n最后一次看到的风景，是窗外的夕阳。你想不通：明明有 5600 万，为什么活成了这样。\n\n财富买得到服务，买不到意义。';
+  } else if (force==='gambler'){
+    rank='赌徒结局'; emoji='🎲'; dark=true;
+    comment='澳门的霓虹终于把你吞了进去。从「玩 20 万体验下」到押上一切，只用了四次。\n\n赌场的数学从不出错，出错的永远是人。\n\n你输掉的不只是钱——是回到正常生活的能力。';
+  } else if (force==='prison'){
+    rank='锒铛入狱结局'; emoji='⛓️'; dark=true;
+    comment='铁门关上的声音，比你想象中要沉。\n中奖时的喜悦恍如隔世。你的律师说最多减到五年，但五年里的每一天，你都在想：如果当初没有那么贪、没有那么冲动……\n\n5600 万没能让你自由，反而把你送进了一个更小的房间。';
+  } else if (force==='kidnapped'){
+    rank='绑架撕票结局'; emoji='🕯️'; dark=true;
+    comment='你交了赎金，但等来的不是电话，是沉默。\n警方在郊区找到了现场。你中了 7000 万的新闻曾经让你上了头条，如今又上了一次。\n\n露脸领奖那天，你以为只是分享喜悦——你不知道，那张脸正在被一群人仔细研究。\n\n5600 万的代价，最终以最残忍的方式收了回来。';
+  } else if (force==='alcoholic'){
+    rank='酒精致灭结局'; emoji='🍷'; dark=true;
+    comment='肝脏在某个凌晨停止了工作。你倒在家中，身边是空酒瓶和到期的银行通知。\n\n酒精最初是安慰，后来是依赖，最后是凶器。你以为你在喝酒，其实是酒在喝你。\n\n5600 万买到了最好的酒，也买到了最快的毁灭。';
+  } else if (force==='scam-wiped'){
+    rank='骗局洗劫一空结局'; emoji='🎭'; dark=true;
+    comment='你踩了 '+S.scams+' 次骗局，累计被骗 '+fmt(S.scamLoss)+'。\n\n你开始恨所有「理财顾问」「私募总监」「老朋友」——但回头看，每一次都是你自己签的字、转的账。\n\n贪婪和恐惧，是骗子的两把刀。你每次以为自己更聪明，其实只是更贪。';
+  } else if (force==='betrayed'){
+    rank='众叛亲离结局'; emoji='💔'; dark=true;
+    comment='你赢了 '+S.friendsLost+' 个人际关系，输掉了 '+fmt(total)+' 以外的所有东西。\n\n亲戚说你冷血，朋友说你抠门，配偶说你变了——他们说的都对，也都不对。你只是守住了一个本该守住的东西：边界。\n\n但边界守到最后，你发现自己站在一座孤岛上。有钱，但没有人可以分享。';
+  } else if (force==='illness'){
+    rank='重病无钱结局'; emoji='🏥'; dark=true;
+    comment='你的保险没覆盖这种病，或者说你一直没买保险。\n\n5600 万花在各种地方，等到真需要救命的时候，账上只剩 '+fmt(total)+'。ICU 的一天费用，比你以为的贵得多。\n\n你以为有钱就不用怕生病——直到你发现，有些病的花费，连 5600 万都扛不住。';
+  } else if (total >= 12000*W && S.mood>=60 && S.rep>=60){
+    rank='传奇投资人结局'; emoji='👑';
+    comment='十年，你把 5600 万变成了 '+fmt(total)+'，还守住了心情和口碑。\n\n你不是靠运气活着的人——你是让运气持续复利的人。';
+  } else if (total >= 8000*W){
+    rank='财富自由结局'; emoji='🏝';
+    comment='资产 '+fmt(total)+'，被动收入每月 '+fmt(passive)+'，彻底覆盖开销。\n\n钱在替你上班，你在替自己活。';
+  } else if (total >= 5600*W){
+    rank='守成有道结局'; emoji='🏡';
+    comment='十年后资产 '+fmt(total)+'，跑赢了绝大多数中奖者。\n\n不冒险、不逞能、不上当——守财的智慧，也是智慧。';
+  } else if (total >= 2000*W){
+    rank='缩水但体面结局'; emoji='☕';
+    comment='资产 '+fmt(total)+'，比巅峰时少了不少，但生活无忧。\n\n你花掉的钱换来了体验，剩下的钱换来了安全感。也算不亏。';
+  } else {
+    rank='坐吃山空结局'; emoji='⌛';
+    comment='十年过去，只剩 '+fmt(total)+'。\n\n没有大灾大难，只是流水一样花完了。沙漏翻过来的时候，谁都以为沙子很多。';
+  }
+
+  const scamNote = S.scams>=3 ? '<br>⚠️ 你一共踩了 '+S.scams+' 次骗局，累计损失 '+fmt(S.scamLoss)+'——「韭菜觉醒」成就达成。' : '';
+  const macauNote = S.macau>=2 ? '<br>🎲 去了 '+S.macau+' 次澳门——赌场永远欢迎你回来。' : '';
+  const friendNote = S.friendsLost>=3 ? '<br>💔 失去了 '+S.friendsLost+' 段关系——有些钱，是用关系换的。' : '';
+
+  app.innerHTML = `
+  <div class="hero ending">
+    <div class="emoji${dark?' shake-end':''}">${emoji}</div>
+    <h1${dark?' class="dark"':''}>${rank}</h1>
+    <div class="rank">
+      历时：${Math.floor(S.month/12)} 年（${S.month} 个月）<br>
+      最终资产：<b${total<5600*W?' class="red"':''}>${fmt(total)}</b>（开局 5600万）<br>
+      月被动收入：<b>${fmt(passive)}</b><br>
+      心情：<b>${Math.round(S.mood)}</b> · 口碑：<b>${Math.round(S.rep)}</b><br>
+      去澳门：${S.macau} 次 · 踩骗局：${S.scams} 次（损失 ${fmt(S.scamLoss)}）<br>
+      失去关系：${S.friendsLost} 段 · 报警记录：${S.police} 次${scamNote}${macauNote}${friendNote}
+    </div>
+    <div class="result" style="text-align:left${dark?' danger':''}">${comment.replace(/\n/g,'<br>')}</div>
+    <button class="btn-main" onclick="startGame()">再中一次 🎰</button>
+  </div>` + logHTML();
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+function startGame(){
+  newGame();
+  showEvent(pickEvent());
+}
+
+showHero();
+</script>
+</body>
+</html>
