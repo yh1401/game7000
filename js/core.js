@@ -125,6 +125,8 @@ function bindKeys(){
       const sb = document.getElementById('btnSfx'); if(sb) sb.click();
     } else if(k === 'm' || k === 'M'){
       const mb = document.getElementById('btnBgm'); if(mb) mb.click();
+    } else if(k === 'r' || k === 'R'){
+      const tb = document.getElementById('btnTts'); if(tb) tb.click();
     }
   });
 }

@@ -58,6 +58,7 @@ function showHero(){
       <li>小心：入狱、破产、离婚分割、被骗、被绑架、酗酒、众叛亲离……</li>
       <li>现实中 70% 的彩票大奖得主在几年内破产——你会是例外吗？</li>
       <li>🎵 带背景音乐与音效 · 右上角可开关（快捷键 M 音乐 / S 音效）</li>
+      <li>🗣️ 语音朗读事件与结局旁白 · 快捷键 R 开关</li>
       <li>⌨️ 键盘：数字键选择选项 · 回车 / 空格继续</li>
     </ul>
   </div>`;
@@ -114,6 +115,7 @@ function showEvent(e){
   <div class="opts">${opts}</div>
   ` + logHTML();
   window.scrollTo({top:0,behavior:'smooth'});
+  TTS.narrate(e.title, e.desc);   // 语音朗读事件
 }
 
 function choose(i){
@@ -155,6 +157,7 @@ function choose(i){
   <button class="btn-main" onclick="nextMonth()">继续 →</button>
   ` + logHTML();
   window.scrollTo({top:0,behavior:'smooth'});
+  TTS.speak(`你选择了${e.options[i].t}。` + result);   // 语音朗读结果
 }
 
 function nextMonth(){
@@ -266,6 +269,7 @@ function showEnding(force){
     <button class="btn-main" onclick="startGame()">再中一次 🎰</button>
   </div>` + logHTML();
   window.scrollTo({top:0,behavior:'smooth'});
+  TTS.speak('结局：' + rank + '。' + comment);   // 语音朗读结局
 }
 
 function startGame(){
@@ -278,6 +282,7 @@ function startGame(){
 (function initAudioUI(){
   const btnSfx = document.getElementById('btnSfx');
   const btnBgm = document.getElementById('btnBgm');
+  const btnTts = document.getElementById('btnTts');
   if(btnSfx) btnSfx.onclick = function(){
     const on = AUDIO.toggleSfx();
     btnSfx.textContent = on ? '🔊' : '🔇';
@@ -289,6 +294,17 @@ function startGame(){
     btnBgm.textContent = on ? '🎵' : '🔕';
     btnBgm.classList.toggle('off', !on);
   };
+  if(btnTts){
+    if(!TTS.supported){ btnTts.style.display = 'none'; }   // 不支持则隐藏
+    else btnTts.onclick = function(){
+      const on = TTS.toggle();
+      btnTts.textContent = on ? '🗣️' : '🤐';
+      btnTts.classList.toggle('off', !on);
+    };
+  }
+  // 朗读时按钮脉冲反馈
+  window.addEventListener('tts:start', function(){ if(btnTts) btnTts.classList.add('speaking'); });
+  window.addEventListener('tts:end',  function(){ if(btnTts) btnTts.classList.remove('speaking'); });
   bindKeys();
 })();
 

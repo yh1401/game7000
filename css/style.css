@@ -398,6 +398,12 @@ body{
 .audio-btn:hover{border-color:var(--border);transform:translateY(-1px) scale(1.06);background:rgba(212,175,55,.08)}
 .audio-btn:active{transform:scale(.94)}
 .audio-btn.off{opacity:.55;filter:grayscale(.4)}
+.audio-btn.speaking{border-color:var(--gold);animation:ttsPulse 1.15s ease-out infinite}
+@keyframes ttsPulse{
+  0%{box-shadow:0 0 0 0 rgba(212,175,55,.45)}
+  70%{box-shadow:0 0 0 10px rgba(212,175,55,0)}
+  100%{box-shadow:0 0 0 0 rgba(212,175,55,0)}
+}
 
 /* ============ 顶部飘字提示 ============ */
 .toast-box{

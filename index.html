@@ -17,12 +17,14 @@
 <div class="audio-ctl" id="audioCtl">
   <button id="btnSfx" class="audio-btn" title="音效开关（快捷键 S）" aria-label="音效开关">🔊</button>
   <button id="btnBgm" class="audio-btn" title="背景音乐开关（快捷键 M）" aria-label="背景音乐开关">🎵</button>
+  <button id="btnTts" class="audio-btn" title="语音朗读开关（快捷键 R）" aria-label="语音朗读开关">🗣️</button>
 </div>
 
 <div class="wrap" id="app"></div>
 
-<!-- 脚本按依赖顺序加载：音频 → 核心 → 事件库 → 游戏流程 -->
+<!-- 脚本按依赖顺序加载：音频 → 语音 → 核心 → 事件库 → 游戏流程 -->
 <script src="js/audio.js"></script>
+<script src="js/speech.js"></script>
 <script src="js/core.js"></script>
 <script src="js/events.js"></script>
 <script src="js/game.js"></script>
