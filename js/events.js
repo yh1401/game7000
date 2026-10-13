@@ -1,6 +1,7 @@
 /* ============================================================
- * events.js — 事件库（152 个事件 / 14 种结局的素材）
+ * events.js — 事件库（158 个事件 / 14 种结局的素材）
  * 事件对象：{id,title,tag,w,once,cond,desc,options:[{t,sub,fx}]}
+ * 事件链：在 fx 内调用 schedule('后续事件id', 月数) 埋下延迟后果，到点后优先触发（见文件末尾「长期剧情线」）
  * ============================================================ */
 const EVENTS = [
 
@@ -625,6 +626,7 @@ const EVENTS = [
   {t:'开！圆一个梦', sub:'每月预计净亏 1-2 万，但心情 +8', fx(s){
     if(s.cash<80*W) return '现金不足。';
     s.cash-=80*W; s.biz+=60*W; s.bizIncome-=1.5*W; addMood(8); s.used.coffee=true;
+    schedule('coffee-boom', 6);   // 事件链：半年后迎来扩张岔路
     return '「有间咖啡馆」开业了。你学会了拉花，认识了常来的客人和附近的猫。\n\n月底一算账：亏 1 万 5。你安慰自己这叫「花钱买工位」。书里说大部分文艺小店死于「为爱发电不计成本」——你决定给爱加一条止损线。';
   }},
   {t:'算了，梦在脑子里更便宜', sub:'情怀是情怀，生意是生意', fx(s){
@@ -1182,7 +1184,7 @@ const EVENTS = [
  options:[
   {t:'做婚前财产公证', sub:'理性但伤感情？', fx(s){
     s.married=true; s.prenup=true;
-    if(chance(0.7)){ addMood(6); addRep(2);
+    if(chance(0.7)){ addMood(6); addRep(2); schedule('marriage-drift', 8);   // 事件链：婚后两年感情考验
       return '你忐忑地提出来，Ta 沉默了一晚，第二天说：「应该的，那是你的运气。我嫁的是你。」\n\n你们去做了公证。出来那天阳光很好，你突然觉得，能谈钱的关系，才最干净。';
     }
     addMood(-10); s.married=false;
@@ -1350,6 +1352,7 @@ const EVENTS = [
   {t:'去！就玩 20 万', sub:'赌场的数学：久赌必输', fx(s){
     if(s.cash<20*W) return '现金不足。';
     s.macau++;
+    if(s.macau<3) schedule('casino-craving', 4);   // 事件链：赌瘾的余温
     if(s.macau>=3){
       const loss=Math.min(s.cash, 1500*W);
       s.cash-=loss; addMood(-30);
@@ -2769,6 +2772,135 @@ const EVENTS = [
   {t:'拒绝，起身离开', sub:'守住底线', fx(s){
     addMood(4); addRep(3);
     return '你婉拒，转身走出派对。夜风一吹，你清醒又后怕。\n\n有些圈子，进去了就出不来了。';
+  }},
+ ]},
+
+// ============ 事件链 · 长期剧情线 ============
+// 以下事件不参与随机池（w:0），仅由前置选择的 schedule('id', 月数) 排期、到点后触发。
+// 每次选择都可能埋下数月后的后果：创业的扩张、婚姻的裂痕、赌瘾的复发。
+
+/* ---- 剧情线 A：咖啡帝国（coffee → coffee-boom → coffee-fate） ---- */
+{id:'coffee-boom', title:'咖啡馆开了一年', tag:'创业',
+ w:0, once:true, cond:s=>s.biz>0,
+ desc:'「有间咖啡馆」勉强保本。隔壁铺面要转让，房东问你：要不要盘下来，开第二家店？\n\n「有间咖啡」四个字，突然有了点连锁的想象空间。',
+ options:[
+  {t:'盘下隔壁，做连锁', sub:'150 万，赌一个品牌', fx(s){
+    if(s.cash<150*W) return '现金不足，你只能继续守着这一家店。';
+    s.cash-=150*W; s.biz+=120*W; s.bizIncome+=0.5*W; addMood(6);
+    schedule('coffee-fate', 12);   // 一年后见分晓
+    return '第二家店开张，你注册了商标，做了统一的视觉和菜单。\n\n有顾客说：「你们是不是要开遍全城？」你笑而不语，心里却真的开始盘算那张地图。';
+  }},
+  {t:'及时止损，转让掉', sub:'会止损也是一种本事', fx(s){
+    s.bizIncome+=1.5*W; s.biz=Math.max(0, s.biz-60*W); s.cash+=45*W; addMood(4);
+    return '你贴出「旺铺转让」，一个月后有人接手。算了算账：进进出出亏了三十多万，但每月不用再填那个洞。\n\n情怀很贵，你只买了一年。';
+  }},
+  {t:'维持现状，当个副业', sub:'不赚不亏的舒适区', fx(s){
+    addMood(2);
+    return '第二家店你没接。咖啡馆继续半死不活地开着，成了你偶尔去发呆的地方。\n\n它不赚钱，但它让你每天有个必须出门的理由。';
+  }},
+ ]},
+{id:'coffee-fate', title:'事业到了临界点', tag:'创业',
+ w:0, once:true, cond:s=>s.biz>0,
+ desc:'两家店都跑顺了。一家投资机构找上门：投 800 万，帮你一年开十家。\n\n对赌协议摆在面前——要么成为城市连锁品牌，要么背上巨额回购条款。',
+ options:[
+  {t:'签！拿融资全国铺开', sub:'规模化的诱惑', fx(s){
+    if(chance(0.45)){ s.cash+=600*W; addMood(12); addRep(6);
+      return '「有间咖啡」成了本地网红连锁，一年开出十二家。你在开业剪彩上被记者围住，问成功秘诀。\n\n你想起第一家店亏钱的那个月，只说了一句：「熬过了没人看好的时候。」';
+    }
+    s.cash=Math.max(0, s.cash-400*W); s.biz=0; s.bizIncome=Math.max(0, s.bizIncome-0.5*W); addMood(-14); addRep(-4);
+    return '盲目扩张踩空了：选址踏错、供应链断裂、对赌失败。十家店的租金和人力像雪崩一样压下来。\n\n两年心血，一夜关停。你终于明白，资本的钱，都是带着钩子的。';
+  }},
+  {t:'稳扎稳打，守住两家店', sub:'小而美的长期主义', fx(s){
+    s.bizIncome+=1.5*W; addMood(8);
+    return '你拒绝了融资。两家店慢慢做出口碑，每月稳稳进账。\n\n别人笑你没格局，你笑笑：有些生意，做大了就不快乐了。';
+  }},
+  {t:'卖掉品牌，套现离场', sub:'急流勇退', fx(s){
+    s.cash+=420*W; s.biz=0; s.bizIncome=Math.max(0, s.bizIncome-0.5*W); addMood(5);
+    return '你把「有间咖啡」连同配方、logo 一起卖给了连锁集团，套现四百多万。\n\n签字那天有点不舍，但你清楚：把喜欢的事做成生意，就该在它还可爱的时候卖掉它。';
+  }},
+ ]},
+
+/* ---- 剧情线 B：婚姻的裂痕（marriage → marriage-drift → marriage-break） ---- */
+{id:'marriage-drift', title:'结婚两年，你们变得沉默', tag:'情感',
+ w:0, once:true, cond:s=>s.married,
+ desc:'同床共枕的人，如今坐在同一张餐桌前，各刷各的手机。\n\nTa 忽然说：「你好像很久没有认真看我一眼了。」',
+ options:[
+  {t:'推掉应酬，重新经营', sub:'感情也是需要维护的资产', fx(s){
+    addMood(10); addRep(3);
+    return '你推掉了几个饭局，重新学着约会：看展、散步、聊些没用的废话。\n\n有天 Ta 靠在你肩上说：「好像又回到刚认识的时候了。」你才发现，陪伴这件事，比转账难多了。';
+  }},
+  {t:'买礼物、请保姆，用钱补', sub:'治标不治本', fx(s){
+    s.cash-=30*W; addMood(3);
+    return '你买了包、买了表，还请了保姆分担家务。Ta 收下了，笑了笑，但那个笑容你有点看不懂。\n\n物质能填满生活，填不满心里那个空。';
+  }},
+  {t:'忙工作，感情的事以后再说', sub:'沉默会滚雪球', fx(s){
+    addMood(-8); schedule('marriage-break', 10);   // 十个月后走到十字路口
+    return '你说了句「最近太忙了」，又埋头进了工作。Ta 没再说什么，只是把餐桌上的鲜花换成了干花。\n\n有些冷淡，是从「以后再说」开始的。';
+  }},
+ ]},
+{id:'marriage-break', title:'婚姻走到了十字路口', tag:'情感',
+ w:0, once:true, cond:s=>s.married,
+ desc:'分居的第三个月，Ta 把一份文件放在桌上：离婚协议书。\n\n「不是钱的问题，」Ta 说，「是我们早就不是彼此的谁了。」',
+ options:[
+  {t:'放下一切，认真挽回', sub:'还来得及吗', fx(s){
+    if(chance(0.5)){ addMood(12); addRep(4);
+      return '你请了长假，把这段婚姻当成最重要的事来救。半年后，你们重新住回了一起。\n\nTa 说：「我等的不是钱，是你终于肯停下来。」';
+    }
+    addMood(-8);
+    return '你尽力了，但有些裂缝补不回原样。你们还是分开了——只是这一次，是体面的。';
+  }},
+  {t:'签字，各自安好', sub:'财产怎么分，取决于当年那纸公证', fx(s){
+    s.married=false; s.divorced=true;
+    if(!s.prenup){
+      s.cash*=0.5; s.deposit*=0.5; s.fund*=0.5; s.gold*=0.5; s.house*=0.5; s.biz*=0.5; s.bizIncome*=0.5;
+      addMood(-12); addRep(-3);
+      return '因为没有婚前协议，婚后共同财产依法对半分割。\n\n你的资产一夜缩水一半。你想起当年嫌麻烦没做的那个公证——代价原来是这么算的。';
+    }
+    s.cash=Math.max(0, s.cash-200*W); addMood(-10); addRep(-2);
+    return '幸好当年做了婚前财产公证，本金保住了，只分了婚后共同的部分。\n\n钱是分清楚了，但你看着空荡荡的家，第一次觉得：公证守住的是钱，守不住的是人。';
+  }},
+  {t:'拖着不离', sub:'拖，往往是最贵的选择', fx(s){
+    addMood(-10); addRep(-2);
+    return '你不同意离。拉锯、争吵、冷暴力，拖了整整一年。\n\n最后钱没多分，人却都更累了。有些仗，赢了也是输。';
+  }},
+ ]},
+
+/* ---- 剧情线 C：赌瘾的深渊（macau → casino-craving → casino-ruin） ---- */
+{id:'casino-craving', title:'那个赢钱的夜晚又回来了', tag:'危险',
+ w:0, once:true, cond:s=>s.macau>=1 && s.macau<4,
+ desc:'深夜三点，你翻来覆去。脑子里全是贵宾厅那盏吊灯、发牌的声音、筹码推过来的那一刻。\n\n手机里还存着「叠码仔」的号码，备注是个笑脸。',
+ options:[
+  {t:'再飞一趟，这次一定见好就收', sub:'每个赌徒都说过这句话', fx(s){
+    s.macau++; addMood(-6);
+    if(s.macau>=3){
+      const loss=Math.min(s.cash, 1200*W); s.cash-=loss; addMood(-25);
+      return '「见好就收」四个字，在你坐上牌桌的第二个小时就忘了。\n\n天亮时，你输掉了 ' + fmt(loss) + '。你已经记不清这是第几次发誓「最后一次」。';
+    }
+    s.cash-=Math.min(s.cash, 60*W); schedule('casino-ruin', 5);
+    return '这次赢了点小钱，你心满意足地离开。可回酒店的路上，你已经在想下次什么时候再来。\n\n赌场从不逼你，它只是永远为你开着门。';
+  }},
+  {t:'拉黑号码，找点正经事做', sub:'戒赌的第一步，是不接电话', fx(s){
+    addMood(9); s.gambling=0;
+    return '你把号码拖进了黑名单，删掉所有博彩 App。第二天你去报了名跑马拉松，把自己累到没力气想别的。\n\n戒瘾不是靠意志力，是靠让生活重新有别的瘾。';
+  }},
+ ]},
+{id:'casino-ruin', title:'抵押房产的那一刻', tag:'危险',
+ w:0, once:true, cond:s=>s.macau>=1,
+ desc:'赌债连本带利到期，叠码仔的语气从客气变成了威胁。有人给你出主意：\n\n「把房子抵押了，最后搏一把，赢回来就都清楚了。」',
+ options:[
+  {t:'抵押房子，最后一把', sub:'「最后一把」永远不是最后一把', fx(s){
+    if(s.house>0){ s.cash+=s.house*0.7; s.house=0; s.houseCost=0; }
+    s.macau+=2; addMood(-18); addRep(-4);
+    const loss=Math.min(s.cash, 2500*W); s.cash-=loss;
+    return '抵押款到账那天你还信心满满。三天后，它和你的理智一起，消失在了那张绿色的桌子上。\n\n你想起第一次赢 15 万的那个晚上——原来那才是赌场给出的诱饵。';
+  }},
+  {t:'向家人坦白，一起面对', sub:'坦白是唯一的上岸口', fx(s){
+    addMood(-6); addRep(3); s.gambling=0; s.macau=0;
+    return '你哭着把一切告诉了家人。没有想象中的责骂，只有沉默，和一句「人还在就好」。\n\n你们一起卖掉些资产还债。损失惨重，但你没有失去最重要的东西——回家的路。';
+  }},
+  {t:'去借高利贷，赌个翻身', sub:'越陷越深', fx(s){
+    s.cash-=Math.min(s.cash, 800*W); s.macau++; addMood(-20);
+    return '你签下了那份利息吓人的合同。钱到手，又进了赌场。\n\n有的债，是用命还的。你开始理解，为什么新闻里那些人，会从楼顶跳下去。';
   }},
  ]},
 ];

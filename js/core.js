@@ -59,6 +59,7 @@ function newGame(){
     blackmail: 0, sued: false, illness: 0,
     friendsLost: 0, police: 0,
     log: [], used: {}, lastEvent: null, over: false,
+    queue: [],   // 事件链：已排期、等待到点触发的后续剧情
   };
 }
 function totalAssets(){ return S.cash + S.deposit + S.fund + S.gold + S.house + S.biz; }
@@ -71,6 +72,10 @@ function monthlyCost(){
 function addMood(d){ S.mood = Math.max(0, Math.min(100, S.mood + d)); }
 function addRep(d){ S.rep = Math.max(0, Math.min(100, S.rep + d)); }
 function say(t){ S.log.unshift(`第${S.month}月 · ${t}`); if(S.log.length>100) S.log.pop(); }
+
+// ---------- 事件链 ----------
+// 在某个选择的 fx 里调用，把后续事件排进队列；此后第 after 个月（默认 6）到点优先触发。
+function schedule(id, after){ S.queue.push({id: id, due: S.month + (after==null ? 6 : after)}); }
 
 // ---------- 顶部飘字提示 ----------
 function toast(text, type){

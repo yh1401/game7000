@@ -46,7 +46,7 @@ function showHero(){
   <div class="hero">
     <div class="emoji">🎰</div>
     <h1>中了7000万</h1>
-    <div class="sub">一款「中奖后人生」模拟游戏 · 10年120个月 · 152个事件 · 14种结局</div>
+    <div class="sub">一款「中奖后人生」模拟游戏 · 10年120个月 · 158个事件 · 14种结局</div>
     <div class="money">¥ 70,000,000</div>
     <div class="sub">偶然所得税 20% · 到手 <b style="color:var(--gold)">5600 万</b></div>
     <br>
@@ -69,6 +69,19 @@ let pendingEvent = null;
 function pickEvent(){
   if (S.month === 0 && !S.used.mask) return EVENTS.find(e=>e.id==='mask');
   if (S.month === 0 && !S.used.secret) return EVENTS.find(e=>e.id==='secret');
+
+  // ---- 事件链：到点的后续剧情优先触发 ----
+  while (S.queue && S.queue.length){
+    const idx = S.queue.findIndex(q => q.due <= S.month);
+    if (idx < 0) break;
+    const item = S.queue.splice(idx, 1)[0];
+    const e = EVENTS.find(x => x.id === item.id);
+    if (!e) continue;                                  // 事件不存在，丢弃
+    if (e.once && S.used[e.id]) continue;              // 已出现过，丢弃
+    if (e.cond && !e.cond(S)) continue;                // 条件不再满足，丢弃
+    return e;
+  }
+
   for (const e of EVENTS){
     if (e.w===0 && e.cond(S) && !(e.once && S.used[e.id])){
       if (e.id==='market-crash' && S.crashFlag){ S.crashFlag=false; return e; }
