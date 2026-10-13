@@ -46,7 +46,7 @@ function showHero(){
   <div class="hero">
     <div class="emoji">🎰</div>
     <h1>中了7000万</h1>
-    <div class="sub">一款「中奖后人生」模拟游戏 · 10年120个月 · 87个事件 · 14种结局</div>
+    <div class="sub">一款「中奖后人生」模拟游戏 · 10年120个月 · 150个事件 · 14种结局</div>
     <div class="money">¥ 70,000,000</div>
     <div class="sub">偶然所得税 20% · 到手 <b style="color:var(--gold)">5600 万</b></div>
     <br>
